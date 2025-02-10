@@ -538,7 +538,7 @@ class Main:
 
         config_gmpes = ConfigObj(conf_filename)
         gmpe_sets = config_gmpes['gmpe_sets']
-        gmpes = config_gmpes['gmpe_modules']
+        gmpes_modules = config_gmpes['gmpe_modules']
 
         GMPE_Set = gmpe_sets.keys()
         print("GMPEs Set = ", GMPE_Set)
@@ -555,7 +555,7 @@ class Main:
 
         # Get GMPEs from the acronyms
         GMPEs_Names = {}
-        for key, item in gmpes.items():  
+        for key, item in gmpes_modules.items():  
             if key in GMPEs_Weights.keys():
                 print(f"Importing {item[0]}")
                 GMPEs_Names[key] = item[0]
