@@ -761,7 +761,7 @@ class Main:
         # 2nd Index: Site index 
 
         # Preallocate SiteGmf
-        SiteGmf = np.empty((self.EnsembleSize, len(sites), self.NumGMPEsRealizations), dtype=object)
+        SiteGmf = np.empty((self.EnsembleSize, len(sites), self.NumGMPEsRealizations), dtype=np.float32)
 
         # Create pool of worker processes
         with Pool(processes=self.num_processes) as pool:
@@ -967,7 +967,7 @@ class StationRecords:
         cbar = plt.colorbar(sc)
         cbar.set_label(f"log10({self.imt})")
 
-        plt.show()
+        #plt.show()
 
         path = os.path.join(os.getcwd(), "OUTPUT")
         if not os.path.exists(path):
@@ -1471,7 +1471,7 @@ class GetDistributions:
             if not os.path.exists(path):
                 os.makedirs(path)
             if datum > 0 and datum_found > 0:
-                plt.show()
+                #plt.show()
                 fig.savefig(path + '/' + 'Distr_POI-' + "{:03d}".format(iPoi + 1) + '.pdf', dpi = 200)
             else:
                 print('!!! Figure not saved')
