@@ -1,7 +1,3 @@
-# 🚨 WARNING 🚨
-
-Recent ShakeMap software updates are causing issues with Docker builds. We're actively working on a fix and will provide updates soon. Thanks for your patience!
-
 # ProbShakemap
 
 `ProbShakemap` is a Python toolbox that propagates source uncertainty from an ensemble of earthquake scenarios to ground motion predictions at a grid of target points. It accounts for model uncertainty by accommodating multiple GMMs and their inherent variability. The package includes `SeisEnsMan`, a tool for generating the ensemble of event-compatible source scenarios. The output consists of a set of products aiding the user to explore and visualize the predictive distribution of ground motion at each target point. Designed for Urgent Computing applications.
@@ -9,9 +5,7 @@ Recent ShakeMap software updates are causing issues with Docker builds. We're ac
 Dependencies
 ------------
 
- * [Shakemap](https://github.com/DOI-USGS/ghsc-esi-shakemap)
  * [OpenQuake](https://github.com/gem/oq-engine/blob/master/README.md)
- * [Docker](https://www.docker.com/)
  
 Command line usage
 ------------------
@@ -65,14 +59,13 @@ input params:
 REQUIRED TO RUN
 ---------------
 
-1) <ins>INGV shakemap Docker Image</ins> --> [INGV shakemap Docker Image](https://github.com/INGV/shakemap/releases/tag/v4.1.3) is the INGV configuration of the [USGS Shakemap Docker Image](https://github.com/DOI-USGS/ghsc-esi-shakemap) incorporating specific GMMs and Vs30 map for the Italian region. Except for that, the two products are equivalent. See below for instructions on how to install the INGV shakemap Docker Image.
-2) <ins>POIs file</ins> --> two space-separated columns .txt file with LAT and LON of the POIs. The file must be put in the folder `INPUT_FILES`. 
-3) <ins>input_file.txt</ins> --> file containing the inputs required by `OpenQuake` and `Shakemap`. The file must be put in the folder `INPUT_FILES` (do not rename it). Be sure to set ID_Event equal to the event_id folder name (see Setting ProbShakemap section below).
+1) <ins>POIs file</ins> --> two space-separated columns .txt file with LAT and LON of the POIs. The file must be put in the folder `INPUT_FILES`. 
+2) <ins>input_file.txt</ins> --> file containing the inputs required by `OpenQuake`. The file must be put in the folder `INPUT_FILES` (do not rename it). Be sure to set ID_Event equal to the event_id folder name (see Setting ProbShakemap section below).
 
 > * TectonicRegionType: as defined in OpenQuake tectonic regionalisation.
 > * Magnitude_Scaling_Relationship: as required from openquake.hazardlib.scalerel.
 > * Rupture_aratio: rupture aspect ratio as required from openquake.hazardlib.geo.surface.PlanarSurface.from_hypocenter
-> * ID_Event: Shakemap ID of the event.
+> * ID_Event: ID of the event.
 > * Vs30file: GMT .grd Vs30 file; if not provided, set it to None. Default Vs30 value (760 m/s) will be used instead.
 > * CorrelationModel: as required from openquake.hazardlib.correlation.
 > * CrosscorrModel: as required from openquake.hazardlib.cross_orrelation.
@@ -86,23 +79,9 @@ REQUIRED TO RUN
 INSTALLATION
 ------------
 
-**Set ProbShakemap**
+**Installation**
 
-Clone the INGV shakemap GitHub repository (tag v4.1.3) into your working directory:
-
-```bash
-git clone --branch v4.1.3 https://github.com/INGV/shakemap.git
-```
-
-The folder `shakemap/data/shakemap_profiles/world/data` includes, as an example, the event-id folder for Norcia earthquake (`8863681/current`). The event-id folder contains the file `event.xml`, with basic information about the event. 
-You need to create an `event-id/current` folder for each new event and provide the corresponding `event.xml` file. The latter can be built easily: start from the `event.xml` file provided for the Norcia example and then edit magnitude and time, the only information needed by `SeisEnsMan` to download the event QUAKEML file (see below). Make sure the event-id is the same you provided in `input_file.txt`. The Vs30 file (`global_italy_vs30_clobber.grd`) is placed in the Docker folder `/home/shake/shakemap_data/vs30` after building the image. The file includes a specific Vs30 model for italy (Michelini et al., 2020). 
-
-Start Docker (download it from [here](https://www.docker.com/)) and build the shakemap Docker Image:
-
-```bash
-cd shakemap
-DOCKER_BUILDKIT=1 docker build --no-cache --build-arg ENV_UID=$(id -u) --build-arg ENV_GID=$(id -g) --tag shakemap4:4.1.3 .
-```
+You need to create an `event-id` folder for each new event and provide the corresponding `event.xml` file. The latter can be built easily: start from the `event.xml` file provided for the Norcia example and then edit magnitude and time, the only information needed by `SeisEnsMan` to download the event QUAKEML file (see below). Make sure the event-id is the same you provided in `input_file.txt`. The provided Vs30 file (`global_italy_vs30_clobber.grd`) includes a specific Vs30 model for italy (Michelini et al., 2020). `SeisEnsMan` generates an ensemble of N earthquake source scenarios that are compatible with the event under consideration, given the past seismicity in the region and the known faults. It utilizes the information from the `event.xml` file to automatically download the event's QUAKEML file and generate the `event_stat.json` file. The latter contains all the necessary parameters for creating the ensemble of scenarios. Examples of event-specific JSON files can be found in the `SeisEnsManV2/IO/EarlyEst` folder. 
 
 Download `ProbShakemap`:
 
@@ -110,17 +89,20 @@ Download `ProbShakemap`:
 git clone https://github.com/INGV/ProbShakemap.git
 ```
 The `ProbShakemap` folder contains the input file, the list of scenarios and the POIs file related to the Amatrice earthquake example.
-Move the folder content to the 'world' folder (needed to preserve all the files after shutting down Docker):
+
+Install probshakemap conda environment by running:
 
 ```bash
-mv ./ProbShakemap/* ./data/shakemap_profiles/world/ && rm -rf ./ProbShakemap
+conda env create -f probshakemap_environment.yml
 ```
 
-**Install SeisEnsMan**
+Then, activate the environment:
 
-`SeisEnsMan` generates an ensemble of N earthquake source scenarios that are compatible with the event under consideration, given the past seismicity in the region and the known faults. It utilizes the information from the `event.xml` file to automatically download the event's QUAKEML file and generate the `event_stat.json` file. The latter contains all the necessary parameters for creating the ensemble of scenarios. Examples of event-specific JSON files can be found in the `SeisEnsManV2/IO/EarlyEst` folder. 
+```bash
+conda activate probshakemap
+```
 
-To install all Python libraries required by `SeisEnsMan`, first create and activate the environment SeisEnsMan:
+If you want to use `SeisEnsMan` to generate the list of source scenarios, you need to create a separate environment:
 
 ```bash
 python -m venv SeisEnsMan
@@ -148,7 +130,7 @@ HOW TO RUN
 **Generate the scenarios ensemble**
 
 Create the `event-id/current` folder for the event and provide the corresponding `event.xml` file. This will be used by `SeisEnsMan` to download the event QUAKEML file needed for generating the ensemble of event-compatible scenarios.
-Activate the environment SeisEnsMan and move to `SeisEnsManV2` directory in `path/to/shakemap/data/shakemap_profiles/world/`. Then run the following command (set the `--nb_scen` parameter to the desired number of scenarios in the ensemble): 
+Activate the environment SeisEnsMan and move to `SeisEnsManV2` directory. Then run the following command (set the `--nb_scen` parameter to the desired number of scenarios in the ensemble; the `--angles` parameter is optional, and can be used to include the strike, dip, and rake of the inverted fault model in the plot): 
 
 ```bash
 ./line_call.sh
@@ -163,19 +145,17 @@ deactivate
 
 **Run ProbShakemap**
 
-Start Docker and move back to `shakemap` directory, then run:
+Activate `ProbShakemap` conda environmente:
 
 ```bash
-docker run -it --rm -v $(pwd)/data/shakemap_profiles:/home/shake/shakemap_profiles -v $(pwd)/data/local:/home/shake/.local --entrypoint=bash shakemap4:4.1.3
-sm_profile -l
-cd /home/shake/shakemap_profiles/world
+conda activate probshakemap
 ```
 
 `ProbShakemap` comes with three utility tools: `StationRecords`, `Save_Output` and `QueryHDF5`. 
 
 **TOOL: StationRecords**
 
-Plot data from `Shakemap` file `stationlist.json` (the file must be placed in the `event-id/current` folder). 
+Plot data from station file formatted as `stationlist.json` (the file must be placed in the `INPUT_FILES` folder). 
 
 ```bash
 python ProbShakemap.py --imt PGA --tool StationRecords --imt_min 0.01 --imt_max 10 --station_file stationlist.json
@@ -310,7 +290,7 @@ python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --num
 
 **HPC**
 
-`ProbShakemap` can be executed on a HPC cluster. Note that this implies converting the Docker image into Singularity’s native format, namely the Singularity Image Format (SIF). The .sif image of the shakemap Docker image can be provided upon request. See an example of bash file to run the code on a HPC cluster at [run_code.bash](https://github.com/angystallone/ProbShakemap/blob/main/run_code.bash). IMPORTANT: the number set at `--ntasks-per-node` must coincide with `num_processes`.
+`ProbShakemap` can be executed on a HPC cluster. IMPORTANT: the number set at `--ntasks-per-node` must coincide with `num_processes`.
 
 
 Contact
