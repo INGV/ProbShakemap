@@ -15,7 +15,7 @@ seed: 0
 * TectonicRegionType: as defined in OpenQuake tectonic regionalisation.
 * Magnitude_Scaling_Relationship: as required from openquake.hazardlib.scalerel.
 * Rupture_aratio: rupture aspect ratio as required from openquake.hazardlib.geo.surface.PlanarSurface.from_hypocenter
-* ID_Event: Shakemap ID of the event.
+* ID_Event: ID of the event.
 * Vs30file: GMT .grd Vs30 file; if not provided, set it to None. Default Vs30 value (760 m/s) will be used instead.
 * CorrelationModel: as required from openquake.hazardlib.correlation.
 * CrosscorrModel: as required from openquake.hazardlib.cross_orrelation.
