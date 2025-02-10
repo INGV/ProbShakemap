@@ -5,21 +5,9 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib import valid
-<<<<<<< HEAD
-
-import shakemap
-from shakemap.utils.config import get_config_paths
-from shakemap.coremods.assemble import AssembleModule
-from shakemap.coremods.select import SelectModule
-from shakemap.coremods.model import ModelModule
-from mapio.gmt import GMTGrid
-
-from configobj import ConfigObj
-=======
 from mapio.gmt import GMTGrid
 
 from configobj import ConfigObj, ConfigObjError
->>>>>>> d5c879f (v 1.2)
 
 import shutil
 import numpy as np
@@ -348,26 +336,6 @@ def get_params():
     config_dict = config.load_config('input_file.txt')
     ID_Event = config_dict['ID_Event']
 
-<<<<<<< HEAD
-    # Install dir and event dir
-    install_path, data_path = get_config_paths()
-    event_dir = os.path.join(data_path, ID_Event, "current")
-
-    if not os.path.exists(event_dir):
-        raise NotADirectoryError(f"{event_dir} is not a valid directory.")
-
-    # Load and parse the event file
-    eventxml = os.path.join(event_dir, "event.xml")    
-    if not os.path.isfile(eventxml):
-        raise FileNotFoundError(f"{eventxml} does not exist.")   
-
-    tree = ET.parse(eventxml)
-    root = tree.getroot()
-
-    # Get the latitude and longitude of the event
-    Lat_Event = root.attrib.get('lat') 
-    Lon_Event = root.attrib.get('lon') 
-=======
     # Event dir
     event_dir = os.path.join(os.getcwd(), f"INPUT_FILES/events/{ID_Event}")
     if not os.path.exists(event_dir):
@@ -381,7 +349,6 @@ def get_params():
     Lon_Event = coordinates[0]  
     Lat_Event = coordinates[1]
     Depth_Event = coordinates[2]  
->>>>>>> d5c879f (v 1.2)
 
     listscenarios_dir = os.getcwd() + "/INPUT_FILES/ENSEMBLE/"
     scenarios_file = [name for name in os.listdir(listscenarios_dir) if name != ".DS_Store"]
@@ -393,11 +360,6 @@ def get_params():
             EnsembleSize += 1
 
     params = {}
-<<<<<<< HEAD
-    params['install_path'] = install_path
-    params['data_path'] = data_path
-=======
->>>>>>> d5c879f (v 1.2)
     params['Lat_Event'] = Lat_Event
     params['Lon_Event'] = Lon_Event
     params['event_dir'] = event_dir
@@ -419,16 +381,9 @@ class Main:
         self.num_processes = num_processes
 
         params = get_params()
-<<<<<<< HEAD
-        self.event_dir = params["event_dir"]
-        self.EnsembleSize = params['Ensemble_Size']
-        self.install_path = params['install_path'] 
-        self.data_path = params['data_path'] 
-=======
         self.event_dir = params['event_dir']
         self.vs30dir = os.path.join(os.getcwd(), f"INPUT_FILES/vs30")
         self.EnsembleSize = params['Ensemble_Size']
->>>>>>> d5c879f (v 1.2)
         
         self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
         self.POIs_lat = np.array(self.POIs_lat)
@@ -539,12 +494,7 @@ class Main:
         truncation_level = config_dict['truncation_level']
         seed = config_dict['seed']
 
-<<<<<<< HEAD
-        print("Install Path = ", self.install_path)
-        print("Data Path = ", self.data_path)
-=======
         print("Event directory = ", self.event_dir)
->>>>>>> d5c879f (v 1.2)
         print("Number of source scenarios to process = ", self.EnsembleSize)
         print("Number of CPU processes: ", str(self.num_processes))
 
@@ -576,59 +526,6 @@ class Main:
         print("Number of GMPEs realizations per POI: " + str(self.NumGMPEsRealizations))
         print("Intensity measure type: " + str(self.imt))
 
-<<<<<<< HEAD
-        # Collects event and configuration data and creates the file shake_data.hdf
-        assemble = AssembleModule(ID_Event, comment='Test comment.')
-        assemble.execute()
-
-        # Reads the data in shake_data.hdf and produces an interpolated ShakeMap --> shake_result.hdf
-        model = ModelModule(ID_Event)
-        model.execute()
-
-        # Generate model_select.conf file, containing GMPE sets 
-        select = SelectModule(ID_Event)
-        select.execute()
-
-        print("********* RETRIEVING GMPEs *******")
-        
-        # Read the event.xml file and generate a GMPE set for the event based on the event’s residence within, 
-        # and proximity to, a set of predefined tectonic regions and user-defined geographic areas
-
-        # Extract GMPE set
-        conf_filename = self.event_dir + '/model_select.conf'
-        config_model_select = ConfigObj(conf_filename)
-        print("Config filename = ", conf_filename)
-
-        GMPE_Set = []
-        for key, _ in config_model_select['gmpe_sets'].items():
-            GMPE_Set.append(config_model_select['gmpe_sets'][key]['gmpes'][0])
-
-        print("GMPEs Set available = ", GMPE_Set)
-
-        # config files
-        conf_filename = self.install_path + '/config/gmpe_sets.conf'
-        config_gmpe_sets = ConfigObj(conf_filename)
-
-        conf_filename = self.install_path + '/config//modules.conf'
-        config_modules = ConfigObj(conf_filename)
-
-        # Get GMPEs acronyms
-        GMPEs_Weights = {}
-        for key, _ in config_gmpe_sets['gmpe_sets'].items():
-            if key in GMPE_Set:
-                if not isinstance(config_gmpe_sets['gmpe_sets'][key]['gmpes'], list):
-                    acronym = str(config_gmpe_sets['gmpe_sets'][key]['gmpes'])
-                    weight = float(config_gmpe_sets['gmpe_sets'][key]['weights'])
-                    GMPEs_Weights[acronym] = weight
-                else:
-                    for acronym, weight in zip(config_gmpe_sets['gmpe_sets'][key]['gmpes'],
-                                               config_gmpe_sets['gmpe_sets'][key]['weights']):
-                        GMPEs_Weights[str(acronym)] = float(weight)
-
-        # Get GMPEs from the acronyms
-        GMPEs_Names = {}
-        for key, item in config_modules['gmpe_modules'].items():  
-=======
         print("********* RETRIEVING GMPEs *******")
 
         conf_filename = self.event_dir + '/gmpes.conf'
@@ -659,7 +556,6 @@ class Main:
         # Get GMPEs from the acronyms
         GMPEs_Names = {}
         for key, item in gmpes.items():  
->>>>>>> d5c879f (v 1.2)
             if key in GMPEs_Weights.keys():
                 print(f"Importing {item[0]}")
                 GMPEs_Names[key] = item[0]
@@ -694,13 +590,6 @@ class Main:
         GMPEs_Names = {acronym: name for acronym, name in GMPEs_Names.items() if acronym in gmpes.keys()}   
 
         if vs30file is not None:
-<<<<<<< HEAD
-            print("********* LOADING Vs30 *******")
-            vs30fullname = os.path.join(self.data_path, 'shakemap_data', 'vs30', vs30file)
-            vs30grid = GMTGrid.load(vs30fullname)
-            # Interpolate Vs30 values at POIs 
-            vs30_POIs = vs30grid.getValue(self.POIs_lat, self.POIs_lon, method="nearest")
-=======
             vs30fullname = os.path.join(self.vs30dir, vs30file)
             if not os.path.isfile(vs30fullname):
                 warnings.warn(f"Warning: The file '{vs30fullname}' does not exist.")
@@ -710,7 +599,6 @@ class Main:
                 vs30grid = GMTGrid.load(vs30fullname)
                 # Interpolate Vs30 values at POIs 
                 vs30_POIs = vs30grid.getValue(self.POIs_lat, self.POIs_lon, method="nearest")
->>>>>>> d5c879f (v 1.2)
 
         print("********* DEFINING OpenQuake SITE COLLECTION *******")
 
@@ -1403,11 +1291,7 @@ class GetStatistics:
                 plt.title(name)
                 cbar = plt.colorbar(sc)
                 cbar.set_label(f"log10({self.imt})")
-<<<<<<< HEAD
-                plt.show()
-=======
                 #plt.show()
->>>>>>> d5c879f (v 1.2)
 
                 figname = path + '/' + 'Stat_' + name.strip() + '.pdf'
                 fig.savefig(figname, dpi = 200)

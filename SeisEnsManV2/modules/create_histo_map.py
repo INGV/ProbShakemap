@@ -134,31 +134,6 @@ def create_histo_map(**kwargs):
    filename = './output/parameters_histo_map_'+str(ename)+'.pdf'
    plt.tight_layout()
    plt.savefig(filename,bbox_inches='tight',format='pdf')
-<<<<<<< HEAD
-    
-
-def move_output():
-
-   print('############# Copying params histos to Prob Shakemap #############')
-
-   start_folder = os.path.abspath(os.path.join(os.getcwd(), './output/'))
-   destination_folder = os.path.abspath(os.path.join(os.getcwd(), '../OUTPUT'))
-   if not os.path.exists(destination_folder):
-      os.makedirs(destination_folder)
-   files = os.listdir(start_folder)
-   filename = [file for file in files if file.startswith('parameters_histo_map_')]
-
-   if filename:
-      file = filename[0]  
-   else:
-      print("No parameter hysto map found")
-      sys.exit()
-
-   # Copy the new file to the destination folder
-   source_path = os.path.join(start_folder, file)
-   destination_path = os.path.join(destination_folder, file)
-   shutil.copy(source_path, destination_path)
-=======
 
    # Copy params histo to INPUT_FILES
    input_dir = os.path.abspath(os.path.join(os.getcwd(), '../INPUT_FILES'))
@@ -173,5 +148,4 @@ def move_output():
    shutil.copy(source_path, destination_path)
    print(f"############# Copied parameters_histo_map_{str(ename)}.pdf to INPUT_FILES/events/{ID_Event}#############")
     
->>>>>>> d5c879f (v 1.2)
     

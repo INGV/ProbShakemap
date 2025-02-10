@@ -12,21 +12,11 @@ import sys
 # LOAD INFO FROM event.xml FILE
 
 input_dir = os.path.abspath(os.path.join(os.getcwd(), '../INPUT_FILES'))
-<<<<<<< HEAD
-data_dir = os.path.abspath(os.path.join(os.getcwd(), '../data'))
-=======
->>>>>>> d5c879f (v 1.2)
 input_file = os.path.join(input_dir, 'input_file.txt')
 
 with open(input_file, 'r') as file:
     lines = file.readlines()    
     ID_Event = str(lines[3].split( )[1])
-<<<<<<< HEAD
-
-event_dir = os.path.join(data_dir, ID_Event, "current")
-if not os.path.exists(event_dir):
-    raise NotADirectoryError(f"{event_dir} is not a valid directory.")
-=======
     print(f"ID event = {ID_Event}")
 
 event_dir = os.path.join(input_dir, 'events', ID_Event)
@@ -34,7 +24,6 @@ if not os.path.exists(event_dir):
     raise NotADirectoryError(f"{event_dir} is not a valid directory.")
 else:
     print(f"Event dir = {event_dir}")
->>>>>>> d5c879f (v 1.2)
 
 eventxml = os.path.join(event_dir, "event.xml")    
 if not os.path.isfile(eventxml):
@@ -53,11 +42,7 @@ min_mag = float(mag) - 0.1
 # DOWNLOAD QUAKEML FILE
 
 url = f"https://webservices.ingv.it/fdsnws/event/1/query?starttime={starttime}&endtime={endtime}&format=quakeml&minmag={min_mag}"
-<<<<<<< HEAD
-print(url)
-=======
 print("URL = ", url)
->>>>>>> d5c879f (v 1.2)
 eventquakeml = 'event.quakeml'
 
 try:
@@ -73,10 +58,7 @@ except requests.exceptions.RequestException as e:
     print(f'An error occurred: {e}')
     sys.exit(1) 
 
-<<<<<<< HEAD
-=======
 
->>>>>>> d5c879f (v 1.2)
 # LOAD NEEDED INFO FROM .quakeml file
 
 try:
@@ -193,8 +175,6 @@ with open(eventstatjson_fullpath, 'w') as file:
     json.dump(data, file, indent=4) 
 
 print(f'############# Stats in {eventstatjson} updated #############')
-<<<<<<< HEAD
-=======
 
 start_folder = os.path.join(os.getcwd(), 'input')
 destination_folder = os.path.abspath(os.path.join(os.getcwd(), f"../INPUT_FILES/events/{ID_Event}"))
@@ -203,5 +183,4 @@ destination_path = os.path.join(destination_folder, 'event_stat.json')
 shutil.copy(source_path, destination_path)
 print(f"############# Copied {eventstatjson} to INPUT_FILES/events/{ID_Event}#############")
 
->>>>>>> d5c879f (v 1.2)
 print('############# Sampling list of scenarios #############')
