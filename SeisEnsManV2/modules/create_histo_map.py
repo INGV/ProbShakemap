@@ -134,6 +134,7 @@ def create_histo_map(**kwargs):
    filename = './output/parameters_histo_map_'+str(ename)+'.pdf'
    plt.tight_layout()
    plt.savefig(filename,bbox_inches='tight',format='pdf')
+<<<<<<< HEAD
     
 
 def move_output():
@@ -157,4 +158,20 @@ def move_output():
    source_path = os.path.join(start_folder, file)
    destination_path = os.path.join(destination_folder, file)
    shutil.copy(source_path, destination_path)
+=======
+
+   # Copy params histo to INPUT_FILES
+   input_dir = os.path.abspath(os.path.join(os.getcwd(), '../INPUT_FILES'))
+   input_file = os.path.join(input_dir, 'input_file.txt')
+
+   with open(input_file, 'r') as file:
+      lines = file.readlines()    
+      ID_Event = str(lines[3].split( )[1])
+   destination_folder = os.path.abspath(os.path.join(os.getcwd(), f"../INPUT_FILES/events/{ID_Event}"))
+   source_path = os.path.join(os.getcwd(), f"output/parameters_histo_map_{str(ename)}.pdf")
+   destination_path = os.path.join(destination_folder, f"parameters_histo_map_{str(ename)}.pdf")
+   shutil.copy(source_path, destination_path)
+   print(f"############# Copied parameters_histo_map_{str(ename)}.pdf to INPUT_FILES/events/{ID_Event}#############")
+    
+>>>>>>> d5c879f (v 1.2)
     
