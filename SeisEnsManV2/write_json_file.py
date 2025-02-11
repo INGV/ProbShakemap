@@ -13,10 +13,12 @@ import sys
 
 input_dir = os.path.abspath(os.path.join(os.getcwd(), '../INPUT_FILES'))
 input_file = os.path.join(input_dir, 'input_file.txt')
+if not os.path.isfile(input_file):
+    raise FileNotFoundError(f"{input_file} does not exist.") 
 
 with open(input_file, 'r') as file:
-    lines = file.readlines()    
-    ID_Event = str(lines[3].split( )[1])
+    lines = file.readlines()
+    ID_Event = str(lines[3].split()[1])
     print(f"ID event = {ID_Event}")
 
 event_dir = os.path.join(input_dir, 'events', ID_Event)

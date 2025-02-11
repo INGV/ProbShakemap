@@ -34,7 +34,6 @@ from short_term                 import short_term_probability_distribution
 from probability_scenarios      import compute_probability_scenarios
 from ensemble_sampling_RS       import compute_ensemble_sampling_RS
 from create_histo_map import create_histo_map     
-from create_histo_map import move_output
 
 ##### BEGIN #####
 ### Configuration files preparation ###
@@ -162,7 +161,5 @@ create_histo_map(cfg                = Config,
                  event_parameters   = event_parameters,
                  scenarios_parameters = par,
                  para_file = myfile)
-
-move_output()
 
 print('############# DONE! #############')
