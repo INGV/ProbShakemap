@@ -66,7 +66,7 @@ git clone https://github.com/INGV/ProbShakemap.git
 Then, create and activate the `probshakemap` conda environment:
 
 ```bash
-conda env create -f probshakemap_environment.yml
+conda env create -f source_environment.yml -n probshakemap
 conda activate probshakemap
 ```
 
