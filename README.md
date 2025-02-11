@@ -38,7 +38,7 @@ input params:
   --imt_min IMT_MIN     Minimum value for the selected IMT (for plot only)
   --imt_max IMT_MAX     Maximum value for the selected IMT (for plot only)
   --station_file STATION_FILE
-                        Shakemap .json station file
+                        Station file (.json, Shakemap-formatted)
   --scenario SCENARIO   Scenario number
   --pois_file POIS_FILE
                         Filename with latitude and longitude of POIs
