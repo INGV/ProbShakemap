@@ -49,7 +49,7 @@ if __name__ == '__main__':
     input_params.add_argument('--num_processes', type=int, default=1, help='Number of CPU cores for code parallelization')
     input_params.add_argument('--imt_min', type=float, help='Minimum value for the selected IMT (for plot only)')
     input_params.add_argument('--imt_max', type=float, help='Maximum value for the selected IMT (for plot only)')
-    input_params.add_argument('--station_file', help='Shakemap .json station file')
+    input_params.add_argument('--station_file', help='Station file (.json, Shakemap-formatted)')
     input_params.add_argument('--scenario', type=float, help='Scenario number')
     input_params.add_argument('--pois_file', help='Filename with latitude and longitude of POIs')
     input_params.add_argument('--deg_round', type=float, default=5, help='Rounding precision for latitude and longitude')
