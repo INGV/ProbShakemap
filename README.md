@@ -303,7 +303,7 @@ python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --num
 
 **HPC**
 
-`ProbShakemap` can be executed on a HPC cluster. IMPORTANT: the number set at `--ntasks-per-node` must coincide with `num_processes`.
+`ProbShakemap` uses the Python `multiprocessing` library to perform computations on chunks of scenarios distributed across multiple processes.
 
 
 Contact
