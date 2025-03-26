@@ -11,13 +11,13 @@ Dependencies
 Command line usage
 ------------------
 <pre>
-usage: ProbShakemap.py [-h] [--imt {PGA,PGV,SA0.3),SA(1.0),SA(3.0}] [--tool {StationRecords,Save_Output,QueryHDF5}]
+usage: ProbShakemap.py [-h] [--imt IMT] [--tool {StationRecords,Save_Output,QueryHDF5}]
                        [--prob_tool {GetStatistics,GetDistributions,EnsemblePlot} [{GetStatistics,GetDistributions,EnsemblePlot} ...]]
-                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--num_processes NUM_PROCESSES]
-                       [--imt_min IMT_MIN] [--imt_max IMT_MAX] [--station_file STATION_FILE] [--scenario SCENARIO]
-                       [--pois_file POIS_FILE] [--deg_round DEG_ROUND] [--pois_subset] [--n_pois N_POIS]
-                       [--max_distance MAX_DISTANCE] [--pois_selection_method {random,azimuth_uniform}]
-                       [--reuse_pois_subset] [--vector_npy] [--fileScenariosWeights FILESCENARIOSWEIGHTS]
+                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--num_processes NUM_PROCESSES] [--imt_min IMT_MIN]
+                       [--imt_max IMT_MAX] [--station_file STATION_FILE] [--scenario SCENARIO] [--pois_file POIS_FILE]
+                       [--deg_round DEG_ROUND] [--pois_subset] [--n_pois N_POIS] [--max_distance MAX_DISTANCE]
+                       [--pois_selection_method {random,azimuth_uniform}] [--reuse_pois_subset] [--vector_npy]
+                       [--fileScenariosWeights FILESCENARIOSWEIGHTS]
 
 ProbShakemap Toolbox
 
@@ -25,8 +25,7 @@ optional arguments:
   -h, --help            show this help message and exit
 
 input params:
-  --imt {PGA,PGV,SA(0.3),SA(1.0),SA(3.0)}
-                        Intensity measure type (IMT)
+  --imt IMT             Intensity measure type (IMT). Possible choices: PGA, PGV, SA.
   --tool {StationRecords,Save_Output,QueryHDF5}
                         Tool(s) to use
   --prob_tool {GetStatistics,GetDistributions,EnsemblePlot} [{GetStatistics,GetDistributions,EnsemblePlot} ...]
