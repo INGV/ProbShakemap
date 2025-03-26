@@ -575,15 +575,40 @@ class Main:
             else:
                 # SA
                 if self.imt[:2] in list_of_imts:
-                    gmpes_ok[acronym] = gmpe
+                    # Check if chosen SA period is supported
+                    period = float(self.imt[3:-1])
+                    # 1. Try to get COEFFS_* from the subclass
+                    coeffs_attr = next(
+                        (attr for attr in gmpe.__class__.__dict__ if attr.startswith("COEFFS")), None)
+                    # 2. If not found, look in the base class
+                    if not coeffs_attr:
+                        coeffs_attr = next(
+                            (attr for attr in dir(gmpe) if attr.startswith("COEFFS")), None)
+                    if coeffs_attr:
+                        coeffs = getattr(gmpe, coeffs_attr)
+                        if hasattr(coeffs, "sa_coeffs"):
+                            supported_periods = [sa.period for sa in coeffs.sa_coeffs]
+                            print(f"Targeted COEFFS Table: {coeffs_attr}, belongs to: {gmpe.__class__.__name__}")
+                            print(f"Supported SA Periods: {supported_periods}\n")
+                    if period in supported_periods:
+                        gmpes_ok[acronym] = gmpe
 
         gmpes = gmpes_ok
 
         if len(gmpes) != 0:
             print("GMPEs with the requested IMT available = ", [item for _, item in gmpes.items()])     
         else:
-            print('No GMPEs with the requested IMT available')   
-            sys.exit() 
+            if self.imt in ['PGA', 'PGV']:
+                print('No GMPEs with the requested IMT available')   
+                sys.exit() 
+            else:
+                #SA
+                if self.imt[:2] in list_of_imts:
+                    print("Chosen SA period not supported. Supported periods = ", supported_periods)
+                    sys.exit() 
+                else:
+                    print('No GMPEs with the requested IMT available')   
+                    sys.exit() 
 
         # Update GMPEs_Names and GMPEs_Weights
         GMPEs_Weights = {acronym: weight for acronym, weight in GMPEs_Weights.items() if acronym in gmpes.keys()}
@@ -592,7 +617,7 @@ class Main:
         if vs30file is not None:
             vs30fullname = os.path.join(self.vs30dir, vs30file)
             if not os.path.isfile(vs30fullname):
-                warnings.warn(f"Warning: The file '{vs30fullname}' does not exist.")
+                print(f"Warning: The file '{vs30fullname}' does not exist.")
                 sys.exit()
             else:
                 print("********* LOADING Vs30 *******")

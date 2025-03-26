@@ -9,7 +9,7 @@ def load_config(file):
     # Extract configuration parameters
     tectonicRegionType = lines[0].split(maxsplit=1)[1:][0].rstrip()
     mag_scaling = str(lines[1].split( )[1]) 
-    rupture_aratio = int(lines[2].split( )[1])
+    rupture_aratio = float(lines[2].split( )[1])
     ID_Event = str(lines[3].split( )[1])
     if str(lines[4].split( )[1]) == 'None':
         vs30file = None
