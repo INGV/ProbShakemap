@@ -13,11 +13,12 @@ Command line usage
 <pre>
 usage: ProbShakemap.py [-h] [--imt IMT] [--tool {StationRecords,Save_Output,QueryHDF5}]
                        [--prob_tool {GetStatistics,GetDistributions,EnsemblePlot} [{GetStatistics,GetDistributions,EnsemblePlot} ...]]
-                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--num_processes NUM_PROCESSES] [--imt_min IMT_MIN]
-                       [--imt_max IMT_MAX] [--station_file STATION_FILE] [--scenario SCENARIO] [--pois_file POIS_FILE]
-                       [--deg_round DEG_ROUND] [--pois_subset] [--n_pois N_POIS] [--max_distance MAX_DISTANCE]
-                       [--pois_selection_method {random,azimuth_uniform}] [--reuse_pois_subset] [--vector_npy]
-                       [--fileScenariosWeights FILESCENARIOSWEIGHTS]
+                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--num_processes NUM_PROCESSES]
+                       [--imt_min IMT_MIN] [--imt_max IMT_MAX] [--station_file STATION_FILE]
+                       [--scenario SCENARIO] [--pois_file POIS_FILE] [--pois_subset] [--n_pois N_POIS]
+                       [--buffer BUFFER] [--max_distance MAX_DISTANCE]
+                       [--pois_selection_method {random,azimuth_uniform}] [--reuse_pois_subset]
+                       [--vector_npy] [--fileScenariosWeights FILESCENARIOSWEIGHTS]
 
 ProbShakemap Toolbox
 
@@ -41,10 +42,9 @@ input params:
   --scenario SCENARIO   Scenario number
   --pois_file POIS_FILE
                         Filename with latitude and longitude of POIs
-  --deg_round DEG_ROUND
-                        Rounding precision for latitude and longitude
   --pois_subset         Extract a subset of POIs
   --n_pois N_POIS       Number of POIs in the subset
+  --buffer BUFFER       Buffer to control resolution in prob_tools maps
   --max_distance MAX_DISTANCE
                         Max distance from epicenter of POIs in the subset
   --pois_selection_method {random,azimuth_uniform}
@@ -304,6 +304,9 @@ python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --num
 
 `ProbShakemap` uses the Python `multiprocessing` library to perform computations on chunks of scenarios distributed across multiple processes.
 
+WORKFLOW
+--------
+`run_code.sh` automates both the generation of the ensemble of scenarios and the propagation of source uncertainty to the set of POIs. It also provides an overview of the commands that can be used to launch the `ProbShakemap` tools.
 
 Contact
 --------
