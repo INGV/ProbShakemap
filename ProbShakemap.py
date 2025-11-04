@@ -13,17 +13,17 @@ start_time = time.time()
 def setup_logging(log_dir):
             
     """
-    Sets up the LOG file
+    Set up the LOG file
     """
        
     current_time = datetime.now().strftime("%Y%m%d%H%M%S")
     log_file = os.path.join(log_dir, f"setup_{current_time}.log")
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def run_main():
+def run_main(EnsembleSize):
 
     """
-    Runs tools.Main()
+    Run tools.Main()
     """
 
     # Set the random seed for reproducibility (must be the same as in tools.py)
@@ -32,7 +32,7 @@ def run_main():
     np.random.seed(seed)
 
     ProbCalc = tools.Main(args.imt, args.pois_file,
-                        args.numGMPEsRealizations, args.num_processes)
+                        args.numGMPEsRealizations, args.num_processes, EnsembleSize)
     
     prob_output = ProbCalc.run_prob_analysis()
 
@@ -52,9 +52,9 @@ if __name__ == '__main__':
     input_params.add_argument('--station_file', help='Station file (.json, Shakemap-formatted)')
     input_params.add_argument('--scenario', type=float, help='Scenario number')
     input_params.add_argument('--pois_file', help='Filename with latitude and longitude of POIs')
-    input_params.add_argument('--deg_round', type=float, default=5, help='Rounding precision for latitude and longitude')
     input_params.add_argument('--pois_subset', action='store_true', default=False, help='Extract a subset of POIs')
     input_params.add_argument('--n_pois', type=int, default=10, help='Number of POIs in the subset')
+    input_params.add_argument('--buffer', type=float, default=0.5, help='Buffer to control resolution in prob_tools maps')
     input_params.add_argument('--max_distance', type=int, default=200, help='Max distance from epicenter of POIs in the subset')
     input_params.add_argument('--pois_selection_method', choices=['random', 'azimuth_uniform'], help='Selection method for the POIs of the subset')
     input_params.add_argument('--reuse_pois_subset', action='store_true', default=False, help='Reuse the subset of POIs already extracted in POIs.txt')
@@ -98,11 +98,10 @@ if __name__ == '__main__':
         logging.info(f"Intensity Measure: {args.imt}")
         logging.info(f"Min {args.imt}: {args.imt_min}")
         logging.info(f"Max {args.imt}: {args.imt_max}")
-        logging.info(f"Deg round: {args.deg_round}")
         logging.info(f"Station file: {args.station_file}")
 
         StationRecords = tools.StationRecords(args.imt, args.imt_min, args.imt_max, 
-                                                args.deg_round, args.station_file)
+                                                args.station_file)
         StationRecords.plot()
 
 
@@ -125,7 +124,7 @@ if __name__ == '__main__':
         logging.info(f"POIs File: {args.pois_file}") 
         logging.info(f"Num GMPEsRealizations: {args.numGMPEsRealizations}")   
         
-        prob_output = run_main()
+        prob_output = run_main(EnsembleSize)
 
         SiteGmf = prob_output["SiteGmf"]
         keys_scen = prob_output["keys_scen"]
@@ -201,7 +200,6 @@ if __name__ == '__main__':
                 logging.info(f"POIs File: {args.pois_file}")
                 logging.info(f"Num GMPEsRealizations: {args.numGMPEsRealizations}")  
                 logging.info(f"File Scenarios Weights: {args.fileScenariosWeights}")  
-                logging.info(f"Deg round: {args.deg_round}")
                 logging.info(f"POIs Subset: {args.pois_subset}")
                 if args.pois_subset:
                     logging.info(f"Num POIs in the Subset: {args.n_pois}")
@@ -217,7 +215,7 @@ if __name__ == '__main__':
                     if args.numGMPEsRealizations is None:
                         raise TypeError("Missing required argument 'numGMPEsRealizations'")
 
-                    prob_output = run_main()
+                    prob_output = run_main(EnsembleSize)
                     SiteGmf = prob_output["SiteGmf"]
 
                     run_main_flag = False    
@@ -225,7 +223,7 @@ if __name__ == '__main__':
                 GetStatistics = tools.GetStatistics(SiteGmf, EnsembleSize, Lon_Event, Lat_Event, args.numGMPEsRealizations, event_dir, args.imt, 
                                                     args.imt_min, args.imt_max, args.fileScenariosWeights, 
                                                     args.pois_file, args.pois_subset, args.n_pois, args.max_distance, 
-                                                    args.pois_selection_method, args.deg_round, pois_subset_flag, args.num_processes, args.vector_npy)
+                                                    args.pois_selection_method, pois_subset_flag, args.num_processes, args.vector_npy, args.buffer)
                 GetStatistics.save_statistics()
                 GetStatistics.plot_statistics()
 
@@ -255,7 +253,6 @@ if __name__ == '__main__':
                 logging.info(f"Num GMPEsRealizations: {args.numGMPEsRealizations}")  
                 logging.info(f"Station file: {args.station_file}")
                 logging.info(f"File Scenarios Weights: {args.fileScenariosWeights}")  
-                logging.info(f"Deg round: {args.deg_round}")
                 logging.info(f"POIs Subset: {args.pois_subset}")
                 if args.pois_subset:
                     logging.info(f"Num POIs in the Subset: {args.n_pois}")
@@ -271,7 +268,7 @@ if __name__ == '__main__':
                     if args.numGMPEsRealizations is None:
                         raise TypeError("Missing required argument 'numGMPEsRealizations'")
                         
-                    prob_output = run_main()
+                    prob_output = run_main(EnsembleSize)
                     SiteGmf = prob_output["SiteGmf"]
 
                     run_main_flag = False    
@@ -279,7 +276,7 @@ if __name__ == '__main__':
                 GetDistributions = tools.GetDistributions(SiteGmf, EnsembleSize, Lon_Event, Lat_Event, args.numGMPEsRealizations, event_dir, 
                                                             args.imt, args.station_file, args.imt_min, args.imt_max, args.fileScenariosWeights, 
                                                             args.pois_file, args.pois_subset, args.n_pois, args.max_distance, 
-                                                            args.pois_selection_method, args.deg_round, args.num_processes, pois_subset_flag)
+                                                            args.pois_selection_method, args.num_processes, pois_subset_flag, args.buffer)
                 GetDistributions.plot_distributions() 
                 pois_subset_flag = False
 
@@ -298,7 +295,6 @@ if __name__ == '__main__':
                 logging.info(f"POIs File: {args.pois_file}")
                 logging.info(f"Num GMPEsRealizations: {args.numGMPEsRealizations}")  
                 logging.info(f"File Scenarios Weights: {args.fileScenariosWeights}")  
-                logging.info(f"Deg round: {args.deg_round}")
                 logging.info(f"POIs Subset: {args.pois_subset}")
                 if args.pois_subset:
                     logging.info(f"Num POIs in the Subset: {args.n_pois}")
@@ -314,12 +310,12 @@ if __name__ == '__main__':
                     if args.numGMPEsRealizations is None:
                         raise TypeError("Missing required argument 'numGMPEsRealizations'")
                         
-                    prob_output = run_main()
+                    prob_output = run_main(EnsembleSize)
                     SiteGmf = prob_output["SiteGmf"]
                     run_main_flag = False    
 
                 EnsemblePlot = tools.EnsemblePlot(SiteGmf, args.imt, Lon_Event, Lat_Event, EnsembleSize, args.numGMPEsRealizations, args.fileScenariosWeights, args.pois_file,
-                                                    args.pois_subset, args.n_pois, args.max_distance, args.deg_round, args.pois_selection_method, args.num_processes, pois_subset_flag)
+                                                    args.pois_subset, args.n_pois, args.max_distance, args.pois_selection_method, args.num_processes, pois_subset_flag, args.buffer)
                 EnsemblePlot.plot()
                 pois_subset_flag = False
 
