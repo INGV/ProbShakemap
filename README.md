@@ -310,6 +310,14 @@ WORKFLOW
 --------
 `run_code.sh` automates both the generation of the ensemble of scenarios and the propagation of source uncertainty to the set of POIs. It also provides an overview of the commands that can be used to launch the `ProbShakemap` tools.
 
+RUPTURE SCENARIOS BUILDING 
+--------------------------
+
+In `SeisEnsMan`, the hypocenter covariance is built by combining a fixed tectonic uncertainty term with a within-fault uncertainty term, resulting in a single 3D Gaussian.
+In `ProbShakemap`, rupture scenarios are implemented via [PlanarSurface.from_hypocenter()](https://docs.openquake.org/oq-engine/3.15/reference/openquake.hazardlib.geo.surface.html?highlight=from_hypocenter#openquake.hazardlib.geo.surface.planar.PlanarSurface.from_hypocenter) from OpenQuake 3.15.0.
+Here, the planar fault is constructed around the hypocenter using fixed offsets. 
+Therefore, each sampled hypocenter acts as the anchor for constructing a planar rupture (consistent with the magnitude scaling relationship and the aspect ratio), rather than being sampled on a pre-defined fault plane. This produces an ensemble of rupture realizations (“cloud of planes”) that captures total hypocentral uncertainty, but does not explicitly separate within-fault vs. global location uncertainty.
+
 Contact
 --------
 
