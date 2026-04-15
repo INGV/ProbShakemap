@@ -131,7 +131,7 @@ This folder should contain a subfolder named with the current event ID, which ne
 
 5) `vs30` (Optional) 
 
-Place the Vs30 .grd file here. An example file, `global_italy_vs30_clobber.grd` (Michelini et al., 2020), is available at this [link](https://drive.google.com/file/d/1nMzPRH4-tmoGh3_8fBY7Jdk7FfllRIx6/view?usp=sharing).
+Place the Vs30 .grd file here. An example file, `global_italy_vs30_clobber.grd` (Michelini et al., 2020), is available at this [link](https://drive.google.com/file/d/1St_tRzBTlB3vY69PCcKu-DYYvehTmYA1/view?usp=sharing).
 
 7) `stationlist.json` (Optional) 
 
