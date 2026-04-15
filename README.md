@@ -7,6 +7,8 @@ Dependencies
 ------------
 
  * [OpenQuake](https://github.com/gem/oq-engine/blob/master/README.md)
+
+NOTE: From `v1.2` onward, `ProbShakemap` uses only `OpenQuake` (original version relied on `ShakeMap` as well) and can be installed with `conda` (no Docker needed).
  
 Command line usage
 ------------------
@@ -333,9 +335,12 @@ If you use `ProbShakemap` in your research, please cite using the following cita
   volume={195},
   pages={105748},
   year={2025},
-  publisher={Elsevier}
+  publisher={Elsevier},
+  doi=10.1016/j.cageo.2024.105748
 }
 ```
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10654186.svg)](https://doi.org/10.5281/zenodo.10654186)
+<a href="https://doi.org/10.5281/zenodo.17525818">
+  <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17525818.svg" alt="DOI">
+</a>
 
