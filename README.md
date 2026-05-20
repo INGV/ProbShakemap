@@ -348,5 +348,5 @@ If you use `ProbShakemap` in your research, please cite using the following cita
 }
 ```
 
-[doi.org/10.1016/j.cageo.2024.105748]([https://github.com/gem/oq-engine/blob/master/README.md](https://doi.org/10.1016/j.cageo.2024.105748))
+[doi.org/10.1016/j.cageo.2024.105748](https://doi.org/10.1016/j.cageo.2024.105748)
 
