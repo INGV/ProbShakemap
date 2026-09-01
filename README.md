@@ -173,7 +173,7 @@ OUTPUT
 `Data_stationfile_{imt}.pdf`: Plot data from .json station file for the selected IMT (PGA in the example).
 
 <p align="center">
-    <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/Data_stationfile_PGA.png" alt="Data_stationfile_PGA" width="60%" height="60%">
+    <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/Data_stationfile_PGA.png" alt="Data_stationfile_PGA" width="60%" height="60%">
 </p>
 
 
@@ -233,7 +233,7 @@ Output saved in the `npyFiles` folder:
 * (OPTIONAL, with command `--vector_npy`) `vector.npy`: a 2D array that stores the ground-motion distributions at all POIs. The array has dimensions (`num_pois`, `num_GMPEsRealizations` * `num_scenarios`), where `num_GMPEsRealizations` represents the number of realizations per scenario, and `num_scenarios` is the total number of scenarios in the ensemble. 
 
 <p align="center">
-    <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/STATISTICS/summary_stats.png" alt="SummaryStats" width="90%" height="90%">
+    <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/STATISTICS/summary_stats.png" alt="SummaryStats" width="90%" height="90%">
 </p>
 
 **TOOL: GetDistributions**
@@ -252,11 +252,11 @@ OUTPUT
 * `Distr_POI-{POI_idx}.pdf`: Plot of Datum-Ensemble comparison at a given POI
 
 <p align="center">
-    <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/POIs_subset.png" alt="DatumEnsemble" width="25%" height="25%">
+    <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/POIs_subset.png" alt="DatumEnsemble" width="25%" height="25%">
 </p>
 
 <p align="center">
-    <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/DISTRIBUTIONS/summary_stats.png" alt="DatumEnsemble" width="90%" height="90%">
+    <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/DISTRIBUTIONS/summary_stats.png" alt="DatumEnsemble" width="90%" height="90%">
 </p>
 
 
@@ -274,7 +274,7 @@ OUTPUT
 * `Ensemble_Spread_Plot_{imt}.pdf`: Boxplot
 
 <p align="center">
-    <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/Ensemble_Plot.png" alt="DatumEnsemble" width="50%" height="50%">
+    <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/Ensemble_Plot.png" alt="DatumEnsemble" width="50%" height="50%">
 </p>
 
 EXAMPLE
