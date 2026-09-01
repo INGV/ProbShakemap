@@ -1,4 +1,3 @@
-from distutils.command import install
 from openquake.hazardlib.source import BaseRupture
 from openquake.hazardlib.geo import Point, surface
 from openquake.hazardlib.site import Site, SiteCollection
@@ -15,34 +14,76 @@ from numpy import save
 import os
 import importlib
 
-import xml.etree.ElementTree as ET
 import h5py
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from matplotlib import colormaps
 
-import multiprocessing
-from multiprocessing import Pool, Process, Lock, Manager
-import itertools
-
-from functools import partial
 import config
-
 import random
 from scipy import constants
 import json
 import sys
-import matplotlib.patches as mpatches
 import seaborn as sns
-from openquake.hazardlib.geo import Point
 from pyproj import Geod
 geod = Geod(ellps='WGS84')
 
+# --- INPUT PARAMS ---
+
+# Load input file
+config_dict = config.load_config('input_file.txt')
+ID_Event = config_dict['ID_Event']
+
+# Get event dir
+event_dir = os.path.join(os.getcwd(), f"INPUT_FILES/events/{ID_Event}")
+if not os.path.isdir(event_dir):
+    raise NotADirectoryError(
+        f"{event_dir} is not a valid directory. "
+        "Create INPUT_FILES/events/<ID_Event>/ and put the event files there."
+    )
+print("Event directory = ", event_dir)
+
+# Get event info
+event_stat_file_path = os.path.join(event_dir, "event_stat.json")
+if not os.path.exists(event_stat_file_path):
+    raise FileNotFoundError(
+        f"{event_stat_file_path} does not exist. "
+        "Put event_stat.json in INPUT_FILES/events/<ID_Event>/."
+    )
+with open(event_stat_file_path, 'r', encoding='utf-8') as f:
+    event_stat_file = json.load(f)
+coordinates = event_stat_file['features'][0]['geometry']['coordinates']
+Lon_Event = coordinates[0]
+Lat_Event = coordinates[1]
+Depth_Event = coordinates[2]
+print("LON Event = ", Lon_Event)
+print("LAT Event = ", Lat_Event)
+print("DEPTH Event = ", Depth_Event)
+
+# Vs30 dir
+vs30dir = os.path.join(os.getcwd(), f"INPUT_FILES/vs30")
+
+# Scenario ensemble info
+listscenarios_dir = os.getcwd() + "/INPUT_FILES/ENSEMBLE/"
+if not os.path.isdir(listscenarios_dir):
+    raise NotADirectoryError(
+        f"{listscenarios_dir} is not a valid directory. "
+        "Create INPUT_FILES/ENSEMBLE/ and put one scenario ensemble file there."
+    )
+scenarios_file = [name for name in os.listdir(listscenarios_dir) if not name.startswith(".")]
+if not scenarios_file:
+    raise FileNotFoundError(
+        f"No scenario ensemble file found in {listscenarios_dir}. "
+        "Put one scenario ensemble file in INPUT_FILES/ENSEMBLE/."
+    )
+with open(os.path.join(listscenarios_dir, scenarios_file[0]), 'r') as f:
+    EnsembleSize = sum(1 for _ in f)
+print("Number of source scenarios to process = ", EnsembleSize)
+    
 # FUNCTION UTILITIES
 
 def dist_lonlat(lon1,lat1,lon2,lat2,coordtype):
-
     """
     Find dist (km) btw 2 points given their lon,lat
     """
@@ -67,19 +108,17 @@ def dist_lonlat(lon1,lat1,lon2,lat2,coordtype):
 
     
 def weighted_percentile(data, weights, perc):
-
     """
     Calculate weighted percentiles
     """
     ix = np.argsort(data)
     data = data[ix] # sort data
     weights = weights[ix] # sort weights
-    cdf = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights) # 'like' a CDF function
+    cdf = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights) 
     return np.interp(perc, cdf, data)
 
 
 def get_pois_coordinates_from_file(path, POIs_File):
-
     """
     Extract POIs coords from POIs file 
     """
@@ -97,7 +136,6 @@ def get_pois_coordinates_from_file(path, POIs_File):
 
 
 def get_pois(POIs_File):
-
     """
     Return POIs coords and names + number of POIs in the file
     """
@@ -114,13 +152,11 @@ def get_pois(POIs_File):
         POIs_lat.append(lat)
         POIs_lon.append(lon)
         POIs_NAMES.append(f"Site_LAT:{Point(float(lon),float(lat)).latitude}_LON:{Point(float(lon),float(lat)).longitude}")
-        n_pois = len(POIs_NAMES)
 
-    return POIs_lat, POIs_lon, POIs_NAMES, n_pois     
+    return np.array(POIs_lat), np.array(POIs_lon), POIs_NAMES, len(POIs_NAMES)     
         
 
 def get_pois_subset(POIs_File, Lon_Event, Lat_Event, pois_selection_method, n_pois, max_distance):
-
     """
     Extract POIs subset. Two options available: 
     1. 'random': randomly extracts the subset
@@ -241,14 +277,19 @@ def get_pois_subset(POIs_File, Lon_Event, Lat_Event, pois_selection_method, n_po
     
 
 def share_pois(POIs_File):
-
     """
     Share the same POIs subset across the prob_tools
     """
 
     start_path = os.path.join(os.getcwd(), "OUTPUT/")
     end_path = os.path.join(os.getcwd(), "INPUT_FILES/")
-    shutil.copy2(os.path.join(os.getcwd(), start_path, POIs_File), os.path.join(os.getcwd(), end_path, POIs_File))
+    source_file = os.path.join(os.getcwd(), start_path, POIs_File)
+    if not os.path.exists(source_file):
+        raise FileNotFoundError(
+            f"Cannot reuse POIs subset: {source_file} does not exist. "
+            "Run a prob_tool with --pois_subset first."
+        )
+    shutil.copy2(source_file, os.path.join(os.getcwd(), end_path, POIs_File))
 
     file_path = os.path.join(end_path, POIs_File)
     
@@ -284,14 +325,75 @@ def share_pois(POIs_File):
             return idx_POIs, POIs_lat, POIs_lon, POIs_NAMES, azimuths, n_pois    
 
 
-def pois_map(POIs_lat, POIs_lon, Lat_Event, Lon_Event, path, buffer):
+def as_pois_arrays(POIs_lat, POIs_lon):
+    return np.array(POIs_lat), np.array(POIs_lon)
 
+
+def load_selected_pois(pois_file, pois_subset, n_pois, max_distance, pois_selection_method, pois_subset_flag=True):
+    if pois_subset_flag:
+        if not bool(pois_subset):
+            POIs_lat, POIs_lon, POIs_NAMES, n_pois = get_pois(pois_file)
+            i_pois = list(range(n_pois))
+            print("Found ", n_pois, "POIs")
+            return {
+                "pois_file": pois_file,
+                "idx_POIs": i_pois,
+                "POIs_lat": POIs_lat,
+                "POIs_lon": POIs_lon,
+                "POIs_NAMES": POIs_NAMES,
+                "azimuths": None,
+                "n_pois": n_pois,
+                "i_pois": i_pois,
+            }
+
+        if pois_selection_method == 'random':
+            idx_POIs, POIs_lat, POIs_lon, POIs_NAMES = get_pois_subset(
+                pois_file, Lon_Event, Lat_Event, pois_selection_method, n_pois, max_distance)
+            azimuths = None
+        else:
+            idx_POIs, POIs_lat, POIs_lon, POIs_NAMES, azimuths = get_pois_subset(
+                pois_file, Lon_Event, Lat_Event, pois_selection_method, n_pois, max_distance)
+
+        POIs_lat, POIs_lon = as_pois_arrays(POIs_lat, POIs_lon)
+        return {
+            "pois_file": pois_file,
+            "idx_POIs": idx_POIs,
+            "POIs_lat": POIs_lat,
+            "POIs_lon": POIs_lon,
+            "POIs_NAMES": POIs_NAMES,
+            "azimuths": azimuths,
+            "n_pois": n_pois,
+            "i_pois": idx_POIs,
+        }
+
+    shared_pois_file = "POIs.txt"
+    idx_POIs, POIs_lat, POIs_lon, POIs_NAMES, azimuths, n_pois = share_pois(shared_pois_file)
+    POIs_lat, POIs_lon = as_pois_arrays(POIs_lat, POIs_lon)
+    print("Found ", n_pois, "POIs in the shared file ", shared_pois_file)
+    return {
+        "pois_file": shared_pois_file,
+        "idx_POIs": idx_POIs,
+        "POIs_lat": POIs_lat,
+        "POIs_lon": POIs_lon,
+        "POIs_NAMES": POIs_NAMES,
+        "azimuths": azimuths,
+        "n_pois": n_pois,
+        "i_pois": idx_POIs,
+    }
+
+
+def set_pois_attrs(obj, pois_data):
+    for key, value in pois_data.items():
+        setattr(obj, key, value)
+
+
+def pois_map(POIs_lat, POIs_lon, Lat_Event, Lon_Event, path, buffer):
     """
     Return a map with POIs and event
     """
 
     poi_indices = [idx + 1 for idx in range(len(POIs_lat))]
-
+    
     min_lon, max_lon = np.min(POIs_lon), np.max(POIs_lon)
     min_lat, max_lat = np.min(POIs_lat), np.max(POIs_lat)
     lon_span = max_lon - min_lon
@@ -332,78 +434,25 @@ def pois_map(POIs_lat, POIs_lon, Lat_Event, Lon_Event, path, buffer):
     plt.close()
 
 
-def get_params():
-        
-    """
-    Return params needed for prob analysis
-    """
-
-    config_dict = config.load_config('input_file.txt')
-    ID_Event = config_dict['ID_Event']
-
-    # Event dir
-    event_dir = os.path.join(os.getcwd(), f"INPUT_FILES/events/{ID_Event}")
-    if not os.path.exists(event_dir):
-        raise NotADirectoryError(f"{event_dir} is not a valid directory.")
-
-    # Get the latitude and longitude of the event
-    event_stat_file_path = os.path.join(event_dir, "event_stat.json")
-    with open(event_stat_file_path, 'r', encoding='utf-8') as f:
-        event_stat_file = json.load(f)
-    coordinates = event_stat_file['features'][0]['geometry']['coordinates']
-    Lon_Event = coordinates[0]  
-    Lat_Event = coordinates[1]
-
-    listscenarios_dir = os.getcwd() + "/INPUT_FILES/ENSEMBLE/"
-    scenarios_file = [name for name in os.listdir(listscenarios_dir) if name != ".DS_Store"]
-
-    # Get the number of scenarios in the file
-    with open(os.path.join(listscenarios_dir, scenarios_file[0]), 'r') as f:
-        EnsembleSize = 0
-        for _ in f:
-            EnsembleSize += 1
-
-    params = {}
-    params['Lat_Event'] = Lat_Event
-    params['Lon_Event'] = Lon_Event
-    params['event_dir'] = event_dir
-    params['Ensemble_Size'] = EnsembleSize
-
-    return params
-    
-
 ##############################################################################
 ############################ PROBSHAKEMAP ####################################
 ##############################################################################
 
 class Main:
-    def __init__(self, IMT, pois_file, NumGMPEsRealizations, num_processes, EnsembleSize):
+    def __init__(self, IMT, pois_file, NumGMPEsRealizations):
 
         self.imt = IMT
         self.pois_file = pois_file
         self.NumGMPEsRealizations = NumGMPEsRealizations
-        self.num_processes = num_processes
-
-        params = get_params()
-        self.event_dir = params['event_dir']
-        self.vs30dir = os.path.join(os.getcwd(), f"INPUT_FILES/vs30")
-        self.EnsembleSize = EnsembleSize
         
         self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
-        self.POIs_lat = np.array(self.POIs_lat)
-        self.POIs_lon = np.array(self.POIs_lon)
 
-    def process_scenario(scen, Ensemble_Scenarios, msr, rupture_aratio, 
+    def process_scenario(k, scen, msr, rupture_aratio, 
                         tectonicRegionType, context_maker, Site_Collection, 
                         correlation_model, crosscorr_model, gmpes, Weighted_Num_Realiz):
-        
         """
-        For a given scenario, retrieve GMFs for each GMPE (proportional to its weight) at all POIs
+        For a given scenario, retrieve GMFs from all GMPEs at all POIs
         """
-
-        # Get scenario index 
-        k = Ensemble_Scenarios.index(scen)
-
         Mag = float(scen[0])
         Hypocenter = Point(float(scen[1]), float((scen[2])), float(scen[3]))
         Rake = float(scen[6])
@@ -454,15 +503,10 @@ class Main:
 
         return k, gmf
     
-    def aggregate_gmfs(scen, Ensemble_Scenarios, NumGMPEsRealizations, sites, gmpes_list, GMPEsRealizationsForProbShakeMap_AllGMPEs):
-        
+    def aggregate_gmfs(k, NumGMPEsRealizations, sites, gmpes_list, GMPEsRealizationsForProbShakeMap_AllGMPEs):
         """
         For a given scenario, aggregate GMFs from all GMPEs at each POI
         """
-
-        # Get scenario index 
-        k = Ensemble_Scenarios.index(scen)
-
         SiteGmf_scen = np.empty((len(sites), NumGMPEsRealizations), dtype=object)
 
         # Loop over sites
@@ -477,9 +521,8 @@ class Main:
         return k, SiteGmf_scen
     
     def run_prob_analysis(self):
-
         """
-        Run prob analysis
+        Run the prob analysis
         """
 
         print("********* STARTING PROB ANALYSIS *******")
@@ -498,15 +541,11 @@ class Main:
         truncation_level = config_dict['truncation_level']
         seed = config_dict['seed']
 
-        print("Event directory = ", self.event_dir)
-        print("Number of source scenarios to process = ", self.EnsembleSize)
-        print("Number of CPU processes: ", str(self.num_processes))
-
         path = os.path.join(os.getcwd(), "OUTPUT")
         if not os.path.exists(path):
             os.makedirs(path)
 
-        # Print user's input
+        # PRINT USER'S INPUT 
         print("TectonicRegionType: " + tectonicRegionType)
         print("Importing " + mag_scaling + " as magnitude scaling relationship")
         module = importlib.import_module('openquake.hazardlib.scalerel')
@@ -532,7 +571,7 @@ class Main:
 
         print("********* RETRIEVING GMPEs *******")
 
-        conf_filename = self.event_dir + '/gmpes.conf'
+        conf_filename = event_dir + '/gmpes.conf'
         try:
             config_gmpes = ConfigObj(conf_filename)
         except ConfigObjError as e:
@@ -618,7 +657,7 @@ class Main:
         GMPEs_Names = {acronym: name for acronym, name in GMPEs_Names.items() if acronym in gmpes.keys()}   
 
         if vs30file is not None:
-            vs30fullname = os.path.join(self.vs30dir, vs30file)
+            vs30fullname = os.path.join(vs30dir, vs30file)
             if not os.path.isfile(vs30fullname):
                 print(f"Warning: The file '{vs30fullname}' does not exist.")
                 sys.exit()
@@ -645,6 +684,8 @@ class Main:
         print(Site_Collection.complete)    
 
         print("********* BUILDING OPENQUAKE CONTEXTS *******")
+
+        # Build OpenQuake contexts
 
         # Define input parameters for ContextMaker
         imtls = {}
@@ -679,17 +720,14 @@ class Main:
                 Weighted_Num_Realiz[max_weight_index] += 1
                 remaining_samples -= 1
 
-        # Check!
         # total_assigned = sum(Weighted_Num_Realiz)
         # print(total_assigned)
  
         # Sample from the total variability of ground motion taking into account both inter- and intra-event variability (for one source scenario only)
         # gmf = exp(mu + crosscorel(tau) + spatialcorrel(phi)) --> See: https://docs.openquake.org/oq-engine/advanced/latest/event_based.html#correlation-of-ground-motion-fields
 
-        GMPEsRealizationsForProbShakeMap_AllGMPEs = [None] * self.EnsembleSize
+        GMPEsRealizationsForProbShakeMap_AllGMPEs = [None] * EnsembleSize
 
-        listscenarios_dir = os.getcwd() + "/INPUT_FILES/ENSEMBLE/"
-        scenarios_file = [name for name in os.listdir(listscenarios_dir) if name != ".DS_Store"]
         f = open(os.path.join(listscenarios_dir, scenarios_file[0]), 'r')
         print("List of scenarios: ", scenarios_file[0])
 
@@ -701,53 +739,13 @@ class Main:
         # Set the random seed for reproducibility in OpenQuake GmfComputer
         np.random.seed(seed)
 
-        ################################
-        # SETTING MULTIPROCESSING PARAMS
-        ################################
+        for i_scen, scenario in enumerate(Ensemble_Scenarios):
+            k, gmf = Main.process_scenario(k=i_scen, scen=scenario, 
+            msr=msr, rupture_aratio=rupture_aratio, tectonicRegionType=tectonicRegionType,
+            context_maker=context_maker, Site_Collection=Site_Collection, 
+            correlation_model=correlation_model, crosscorr_model=crosscorr_model, gmpes=gmpes_list, 
+            Weighted_Num_Realiz=Weighted_Num_Realiz)
 
-        chunk_size_default = int(self.EnsembleSize/self.num_processes) # size of each chunk of scenarios
-        #print("Chunk size = ", chunk_size_default)
-        last_chunk_size = chunk_size_default + self.EnsembleSize - self.num_processes * chunk_size_default # size of the last chunk
-        #print("Last chunk size = ", last_chunk_size)
-
-        # Create pool of worker processes
-        with Pool(processes=self.num_processes) as pool:
-            results = []
-
-            # iterate over processes
-            for i in range(self.num_processes):
-                if i == self.num_processes - 1:
-                    chunk_size = last_chunk_size # adjust chunk size for the last process
-                else:
-                    chunk_size = chunk_size_default
-
-                start_idx = i * chunk_size
-                end_idx = (i+1) * chunk_size
-                # adjust k_start and k_end for the last chunk
-                if i == self.num_processes - 1:
-                    start_idx = self.EnsembleSize - chunk_size
-                    end_idx = self.EnsembleSize 
-
-                chunk = Ensemble_Scenarios[start_idx:end_idx]
-
-                chunk_results = []
-                for scenario in chunk:
-                    result = Main.process_scenario(scen=scenario, Ensemble_Scenarios=Ensemble_Scenarios, 
-                                            msr=msr, rupture_aratio=rupture_aratio, tectonicRegionType=tectonicRegionType,
-                                            context_maker=context_maker, Site_Collection=Site_Collection, 
-                                            correlation_model=correlation_model, crosscorr_model=crosscorr_model, gmpes=gmpes_list, 
-                                            Weighted_Num_Realiz=Weighted_Num_Realiz)
-                    chunk_results.append(result)
-
-                results.extend(chunk_results)
-
-            pool.close()
-            pool.join()    
-
-        # Combine results
-        for result in results:
-            k = result[0]
-            gmf = result[1]
             GMPEsRealizationsForProbShakeMap_AllGMPEs[k] = gmf
 
             # PRINTING INFO
@@ -757,7 +755,7 @@ class Main:
                     print("IMT: ", self.imt, "-- GMPE", gmpe, "is sampled", Weighted_Num_Realiz[g], "times over a total of", self.NumGMPEsRealizations, "times")
 
         # GMFs AGGREGATION
-        # Aggregate the generated GMF at each POI 
+        # Aggregate the generated gmf at each site for Probabilistic Shakemap
 
         # Structure of GMPEsRealizationsForProbShakeMap_AllGMPEs
         # 1st Index: Scenario index
@@ -771,7 +769,7 @@ class Main:
         # print("SHAPE = ", len(GMPEsRealizationsForProbShakeMap_AllGMPEs[0][0]))
         # print("SHAPE = ", len(GMPEsRealizationsForProbShakeMap_AllGMPEs[0][0][0]))
 
-        # For each scenario and POI, there are as many values as the number of GMFs (spread across the GMPEs)
+        # For each scenario and POI, there are as many values as the number of GMFs (spread across the GMPEs) 
 
         # PREPARE KEYS FOR SCENARIOS AND SITES
         keys_sites = [] 
@@ -779,7 +777,7 @@ class Main:
             keys_sites.append(f"Site_LAT:{Point(float(self.POIs_lon[s]), float(self.POIs_lat[s])).latitude}_LON:{Point(float(self.POIs_lon[s]), float(self.POIs_lat[s])).longitude}")
 
         keys_scen = []
-        for k in range(self.EnsembleSize):
+        for k in range(EnsembleSize):
             keys_scen.append(f"Scenario_{k+1}") 
 
         # # Structure of SiteGmf 
@@ -787,44 +785,13 @@ class Main:
         # 2nd Index: Site index 
 
         # Preallocate SiteGmf
-        SiteGmf = np.empty((self.EnsembleSize, len(sites), self.NumGMPEsRealizations), dtype=np.float32)
+        SiteGmf = np.empty((EnsembleSize, len(sites), self.NumGMPEsRealizations), dtype=np.float32)
 
-        # Create pool of worker processes
-        with Pool(processes=self.num_processes) as pool:
-            results = []
+        for i_scen, scenario in enumerate(Ensemble_Scenarios):
+            i_scen, SiteGmf_scen = Main.aggregate_gmfs(k=i_scen, 
+            NumGMPEsRealizations=self.NumGMPEsRealizations, sites=sites, gmpes_list=gmpes_list, 
+            GMPEsRealizationsForProbShakeMap_AllGMPEs=GMPEsRealizationsForProbShakeMap_AllGMPEs)
 
-            # iterate over processes
-            for i in range(self.num_processes):
-                if i == self.num_processes - 1:
-                    chunk_size = last_chunk_size # adjust chunk size for the last process
-                else:
-                    chunk_size = chunk_size_default
-
-                start_idx = i * chunk_size
-                end_idx = (i+1) * chunk_size
-                # adjust k_start and k_end for the last chunk
-                if i == self.num_processes - 1:
-                    start_idx = self.EnsembleSize - chunk_size
-                    end_idx = self.EnsembleSize 
-
-                chunk = Ensemble_Scenarios[start_idx:end_idx]
-
-                chunk_results = []
-                for scenario in chunk:
-                    result = Main.aggregate_gmfs(scen=scenario, Ensemble_Scenarios=Ensemble_Scenarios, 
-                                                 NumGMPEsRealizations=self.NumGMPEsRealizations, sites=sites, gmpes_list=gmpes_list, 
-                                                 GMPEsRealizationsForProbShakeMap_AllGMPEs=GMPEsRealizationsForProbShakeMap_AllGMPEs)
-                    chunk_results.append(result)
-
-                results.extend(chunk_results)
-
-            pool.close()
-            pool.join()    
-
-        # Combine results
-        for result in results:
-            i_scen = result[0]
-            SiteGmf_scen = result[1]
             SiteGmf[i_scen] = SiteGmf_scen
 
         print("********* PROB ANALYSIS DONE! *******")
@@ -839,15 +806,19 @@ class Main:
             "keys_sites": keys_sites
         }
 
-        return prob_output
+        logging_info = {
+            "Scenarios_File": scenarios_file,
+            "Ensemble_Size": EnsembleSize
+        }
+
+        return prob_output, logging_info
     
 
 class Write():
-    def __init__(self, IMT, EnsembleSize, keys_scen, SiteGmf, keys_sites, num_processes):
+    def __init__(self, IMT, keys_scen, SiteGmf, keys_sites):
 
-        self.num_processes = num_processes
         self.imt = IMT
-        self.EnsembleSize = EnsembleSize
+        self.EnsembleSize = len(keys_scen)
         self.keys_scen = keys_scen
         self.SiteGmf = SiteGmf
         self.keys_sites = keys_sites
@@ -897,12 +868,9 @@ class StationRecords:
         self.imt_max = imt_max
         self.stationfile = stationfile
 
-        params = get_params()
-        self.event_dir = params["event_dir"]
-
     def get_data_coord(self):    
 
-        file_station = os.path.join(self.event_dir, self.stationfile)
+        file_station = os.path.join(event_dir, self.stationfile)
 
         with open(file_station) as json_file:
 
@@ -917,7 +885,7 @@ class StationRecords:
     
     def get_data(self):    
 
-        file_station = os.path.join(self.event_dir, self.stationfile)
+        file_station = os.path.join(event_dir, self.stationfile)
 
         with open(file_station) as json_file:
 
@@ -946,7 +914,7 @@ class StationRecords:
     
     def get_stations(self):    
 
-        file_station = os.path.join(self.event_dir, self.stationfile)
+        file_station = os.path.join(event_dir, self.stationfile)
 
         with open(file_station) as json_file:
 
@@ -965,7 +933,7 @@ class StationRecords:
 
         data_lon, data_lat = StationRecords.get_data_coord(self)
         data_imt = StationRecords.get_data(self)
-  
+    
         min_lon, max_lon = np.min(data_lon), np.max(data_lon)
         min_lat, max_lat = np.min(data_lat), np.max(data_lat)
         lon_span = max_lon - min_lon
@@ -1013,7 +981,7 @@ class StationRecords:
 
 class QueryHDF5:
     def __init__(self, scenario, pois_file, pois_subset, n_pois, max_distance,
-                pois_selection_method, Lon_Event, Lat_Event):
+                pois_selection_method):
 
         self.scenario = scenario
         self.pois_file = pois_file
@@ -1021,24 +989,10 @@ class QueryHDF5:
         self.n_pois = n_pois
         self.max_distance = max_distance    
         self.pois_selection_method = pois_selection_method
-        self.Lon_Event = Lon_Event
-        self.Lat_Event = Lat_Event
 
-        if self.pois_subset == False:  
-
-            self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
-            self.POIs_lat = np.array(self.POIs_lat)
-            self.POIs_lon = np.array(self.POIs_lon)
-            print("Found ", self.n_pois, "POIs")
-
-        else:
-            if self.pois_selection_method == 'random':
-                self.azimuths = None
-                self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                            self.pois_selection_method, self.n_pois, self.max_distance)
-            else:
-                self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                            self.pois_selection_method, self.n_pois, self.max_distance)
+        set_pois_attrs(self, load_selected_pois(
+            self.pois_file, self.pois_subset, self.n_pois, self.max_distance,
+            self.pois_selection_method))
 
         outfile_dir = os.path.join(os.getcwd(), "OUTPUT/HDF5_FILES/")
         filename = [name for name in os.listdir(outfile_dir) if name != ".DS_Store"][0]
@@ -1077,17 +1031,13 @@ class QueryHDF5:
 
 
 class GetStatistics:
-    def __init__(self, SiteGmf, EnsembleSize, Lon_Event, Lat_Event, NumGMPEsRealizations,
-                  event_dir, IMT, imt_min, imt_max, fileScenariosWeights, 
-                 pois_file, pois_subset, n_pois, max_distance, pois_selection_method,
-                 pois_subset_flag, num_processes, vector_npy, buffer):
+    def __init__(self, SiteGmf, NumGMPEsRealizations, IMT, imt_min, imt_max, fileScenariosWeights, 
+                 pois_file, pois_subset, n_pois, max_distance, pois_selection_method, 
+                 pois_subset_flag, vector_npy, buffer):
 
         self.NumGMPEsRealizations = NumGMPEsRealizations
         self.SiteGmf = SiteGmf
-        self.EnsembleSize =  EnsembleSize
-        self.Lon_Event = Lon_Event
-        self.Lat_Event = Lat_Event
-        self.event_dir = event_dir
+        self.EnsembleSize = SiteGmf.shape[0]
         self.imt = IMT
         self.imt_min = imt_min
         self.imt_max = imt_max
@@ -1098,68 +1048,35 @@ class GetStatistics:
         self.max_distance = max_distance
         self.pois_selection_method = pois_selection_method
         self.pois_subset_flag = bool(pois_subset_flag)
-        self.num_processes = num_processes
         self.vector_npy = bool(vector_npy)
         self.buffer = buffer
+        self._stats_cache = None
 
         print(f"Save vector.npy set to {self.vector_npy}")
 
-        if self.pois_subset_flag:
-            if self.pois_subset == False:  
+        set_pois_attrs(self, load_selected_pois(
+            self.pois_file, self.pois_subset, self.n_pois, self.max_distance,
+            self.pois_selection_method, self.pois_subset_flag))
 
-                self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                print("Found ", self.n_pois, "POIs")
-                self.i_pois = list(range(self.n_pois))
-
-            else:
-
-                if self.pois_selection_method == 'random':
-                    self.azimuths = None
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-                else:
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-        
-                self.n_pois = n_pois
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                self.i_pois = self.idx_POIs
-
-        else:
-            self.pois_file = "POIs.txt"
-            self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths, self.n_pois = share_pois(self.pois_file)
-            self.POIs_lat = np.array(self.POIs_lat)
-            self.POIs_lon = np.array(self.POIs_lon)
-            print("Found ", self.n_pois, "POIs in the shared file ", self.pois_file)
-            self.i_pois = self.idx_POIs
-
-    def process_scen_gmf(scen, Ensemble_Scenarios, site_gmf, i_pois, n_pois, num_realizations, weights):
-        
+    def process_scen_gmf(i_scen, site_gmf, i_pois, n_pois, num_realizations, weights):
         """
         Prepare for POI-level statistics
         """
-
-        # Get scenario index 
-        i_scen = Ensemble_Scenarios.index(scen)
-     
         vector_scen = np.zeros([n_pois, num_realizations])
-        weight_scen = np.zeros([n_pois, num_realizations]) 
-
         for jp in range(n_pois):
-
             vector_scen[jp] = site_gmf[i_scen][i_pois[jp]]
-            weight_scen = weights[i_scen] / num_realizations
+
+        weight_scen = weights[i_scen] / num_realizations
 
         return i_scen, vector_scen, weight_scen
 
     def calc_statistics(self):
-
         """
         Calculate the statistics of the ground motion distributions at all POIs
         """
+
+        if self._stats_cache is not None:
+            return self._stats_cache
 
         # Define statistical measures
         vector_stat_names = ['Mean', 'Median', 'Percentile 10', 'Percentile 20', 'Percentile 80', 'Percentile 90', 
@@ -1176,49 +1093,11 @@ class GetStatistics:
 
         weights = weights / np.sum(weights)  # Normalize weights
 
-        listscenarios_dir = os.getcwd() + "/INPUT_FILES/ENSEMBLE/"
-        scenarios_file = [name for name in os.listdir(listscenarios_dir) if name != ".DS_Store"]
         f = open(os.path.join(listscenarios_dir, scenarios_file[0]), 'r')
         Ensemble_Scenarios = []
         for _, line in enumerate(f):
             scen = line.strip().split(' ')
             Ensemble_Scenarios.append(scen) 
-
-        # Chunking
-        chunk_size_default = int(self.EnsembleSize/self.num_processes) # size of each chunk of scenarios
-        last_chunk_size = chunk_size_default + self.EnsembleSize - self.num_processes * chunk_size_default # size of the last chunk
-
-        # Create pool of worker processes
-        with Pool(processes=self.num_processes) as pool:
-            results = []
-        
-            # iterate over processes
-            for i in range(self.num_processes):
-                if i == self.num_processes - 1:
-                    chunk_size = last_chunk_size # adjust chunk size for the last process
-                else:
-                    chunk_size = chunk_size_default
-
-                start_idx = i * chunk_size
-                end_idx = (i+1) * chunk_size
-                # adjust k_start and k_end for the last chunk
-                if i == self.num_processes - 1:
-                    start_idx = self.EnsembleSize - chunk_size
-                    end_idx = self.EnsembleSize 
-
-                chunk = Ensemble_Scenarios[start_idx:end_idx]
-
-                chunk_results = []
-                for scenario in chunk: 
-                    result = GetStatistics.process_scen_gmf(scen=scenario, Ensemble_Scenarios=Ensemble_Scenarios, 
-                                                             site_gmf=self.SiteGmf, i_pois=self.i_pois, n_pois=self.n_pois, 
-                                                             num_realizations=self.NumGMPEsRealizations, weights=weights)
-                    chunk_results.append(result)
-
-                results.extend(chunk_results)
-
-            pool.close()
-            pool.join()    
 
         vector_stat = {name: [0] * self.n_pois for name in vector_stat_names}
         # 'vector' gathers, for each POI, the ground motion distribution collecting
@@ -1226,11 +1105,10 @@ class GetStatistics:
         vector = np.zeros((self.n_pois, self.NumGMPEsRealizations * self.EnsembleSize))
         weight = np.zeros((self.n_pois, self.NumGMPEsRealizations * self.EnsembleSize)) 
 
-        # Collect results
-        for result in results:  
-            i_scen = result[0]
-            vector_scen = result[1]
-            weight_scen = result[2]
+        for i_scen, scenario in enumerate(Ensemble_Scenarios): 
+            i_scen, vector_scen, weight_scen = GetStatistics.process_scen_gmf(i_scen=i_scen, 
+                                                site_gmf=self.SiteGmf, i_pois=self.i_pois, n_pois=self.n_pois, 
+                                                num_realizations=self.NumGMPEsRealizations, weights=weights)
             start = i_scen * self.NumGMPEsRealizations
             end = (i_scen + 1) * self.NumGMPEsRealizations
             vector[:, start:end] = vector_scen
@@ -1252,13 +1130,13 @@ class GetStatistics:
 
         stats = {'vector_stat': vector_stat, 'vector': vector, 'weight': weight}
 
-        return stats, vector_stat_names
+        self._stats_cache = stats, vector_stat_names
+        return self._stats_cache
 
     def save_statistics(self):
-
         """
         Save 'vector_stat.npy' with all statistics
-        [OPTIONAL] Saves 'vector.npy' with all ground motion distributions at all POIs (can be huge!)
+        [OPTIONAL] Save 'vector.npy' with all ground motion distributions at all POIs (can be huge!)
         """
 
         stats, _ = GetStatistics.calc_statistics(self)
@@ -1274,13 +1152,12 @@ class GetStatistics:
             save(path + '/' + f"{self.imt}" + '_vector.npy', vector)
 
     def plot_statistics(self):
-
         """
-        Visualize statistics from (most of) 'vector_stat.npy' on a map and save it
+        Visualize statistics from 'vector_stat.npy' on a map and saves it
         """
 
         print("********* GENERATING STATISTICS PLOTS *******")
-
+        
         path = os.path.join(os.getcwd(), "OUTPUT/STATISTICS")
         if not os.path.exists(path):
             os.makedirs(path)
@@ -1339,16 +1216,12 @@ class GetStatistics:
 
 
 class GetDistributions:
-    def __init__(self, SiteGmf, EnsembleSize, Lon_Event, Lat_Event, NumGMPEsRealizations, event_dir, IMT, stationfile, imt_min, imt_max, 
-                 fileScenariosWeights, pois_file, pois_subset, n_pois, max_distance, pois_selection_method,
-                 num_processes, pois_subset_flag, buffer):
+    def __init__(self, SiteGmf, NumGMPEsRealizations, IMT, stationfile, imt_min, imt_max, 
+                 fileScenariosWeights, pois_file, pois_subset, n_pois, max_distance, pois_selection_method, pois_subset_flag, buffer):
 
         self.SiteGmf = SiteGmf
-        self.EnsembleSize = EnsembleSize
-        self.Lon_Event = Lon_Event
-        self.Lat_Event = Lat_Event
+        self.EnsembleSize = SiteGmf.shape[0]
         self.NumGMPEsRealizations = NumGMPEsRealizations
-        self.event_dir = event_dir
         self.imt = IMT
         self.stationfile = stationfile
         self.imt_min = imt_min
@@ -1359,44 +1232,15 @@ class GetDistributions:
         self.n_pois = n_pois
         self.max_distance = max_distance
         self.pois_selection_method = pois_selection_method
-        self.num_processes = num_processes
         self.pois_subset_flag = bool(pois_subset_flag)
         self.buffer = buffer
+        self._stats_cache = None
 
-        if self.pois_subset_flag:
-            if self.pois_subset == False:  
-
-                self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                print("Found ", self.n_pois, "POIs")
-                self.i_pois = list(range(self.n_pois))
-
-            else:
-
-                if self.pois_selection_method == 'random':
-                    self.azimuths = None
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-                else:
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-    
-                self.n_pois = n_pois
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                self.i_pois = self.idx_POIs
-
-        else:
-            self.pois_file = "POIs.txt"
-            self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths, self.n_pois = share_pois(self.pois_file)
-            self.POIs_lat = np.array(self.POIs_lat)
-            self.POIs_lon = np.array(self.POIs_lon)
-            print("Found ", self.n_pois, "POIs in the shared file ", self.pois_file)
-            self.i_pois = self.idx_POIs
+        set_pois_attrs(self, load_selected_pois(
+            self.pois_file, self.pois_subset, self.n_pois, self.max_distance,
+            self.pois_selection_method, self.pois_subset_flag))
 
     def plot_distributions(self):
-
         """
         Plot the CDFs at the selected POIs along with data measured at the corresponding stations
         (or at the closest stations if not available)
@@ -1427,7 +1271,7 @@ class GetDistributions:
             selPOI_p90_vec = vector_stat['Percentile 90'][iPoi]
 
             # Select the closest recording to the selected POI
-  
+    
             selPOI_lat = self.POIs_lat[iPoi]
             selPOI_lon = self.POIs_lon[iPoi]
 
@@ -1448,7 +1292,7 @@ class GetDistributions:
             print('---- POINT ', iPoi + 1, '-----')
             print('POI Coord : ', selPOI_lon,'/', selPOI_lat)
             print(f"Datum Coord: {datum_lon} / {datum_lat}: ln({self.imt}) -> {datum:.4f}")
-           
+            
             if datum_dist < self.max_distance: 
                 datum_found = 1
             else: 
@@ -1479,7 +1323,7 @@ class GetDistributions:
             x, y = m(datum_lon, datum_lat)
             m.plot(x, y, 'xg', label='Closest Observation')
             
-            x, y = m(self.Lon_Event, self.Lat_Event)
+            x, y = m(Lon_Event, Lat_Event)
             m.plot(x, y, '*', label='Epicenter')
 
             plt.title(f"Station: {station_id_isel} ({station_name_isel})", fontsize=10)
@@ -1515,18 +1359,16 @@ class GetDistributions:
 
         print(f"***** Figures saved in {path} *****")   
 
-        pois_map(self.POIs_lat, self.POIs_lon, self.Lat_Event, self.Lon_Event, path, self.buffer)
+        pois_map(self.POIs_lat, self.POIs_lon, Lat_Event, Lon_Event, path, self.buffer)
 
 
 class EnsemblePlot:
-    def __init__(self, SiteGmf, IMT, Lon_Event, Lat_Event, EnsembleSize, NumGMPEsRealizations, fileScenariosWeights, pois_file, 
-                 pois_subset, n_pois, max_distance, pois_selection_method, num_processes, pois_subset_flag, buffer):
+    def __init__(self, SiteGmf, IMT,NumGMPEsRealizations, fileScenariosWeights, pois_file, 
+                 pois_subset, n_pois, max_distance, pois_selection_method, pois_subset_flag, buffer):
 
         self.SiteGmf = SiteGmf
-        self.EnsembleSize = EnsembleSize
+        self.EnsembleSize = SiteGmf.shape[0]
         self.imt = IMT
-        self.Lon_Event = Lon_Event
-        self.Lat_Event = Lat_Event
         self.NumGMPEsRealizations = NumGMPEsRealizations
         self.fileScenariosWeights = fileScenariosWeights
         self.pois_file = pois_file
@@ -1534,44 +1376,15 @@ class EnsemblePlot:
         self.n_pois = n_pois
         self.max_distance = max_distance     
         self.pois_selection_method = pois_selection_method
-        self.num_processes = num_processes
         self.pois_subset_flag = bool(pois_subset_flag)
         self.buffer = buffer
+        self._stats_cache = None
 
-        if self.pois_subset_flag:
-            if self.pois_subset == False:  
-
-                self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.n_pois = get_pois(self.pois_file)
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                print("Found ", self.n_pois, "POIs")
-                self.i_pois = list(range(self.n_pois))
-
-            else:
-
-                if self.pois_selection_method == 'random':
-                    self.azimuths = None
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-                else:
-                    self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths = get_pois_subset(self.pois_file, Lon_Event, Lat_Event, 
-                                                                self.pois_selection_method, self.n_pois, self.max_distance)
-                    
-                self.n_pois = n_pois
-                self.POIs_lat = np.array(self.POIs_lat)
-                self.POIs_lon = np.array(self.POIs_lon)
-                self.i_pois = self.idx_POIs
-
-        else:
-            self.pois_file = "POIs.txt"
-            self.idx_POIs, self.POIs_lat, self.POIs_lon, self.POIs_NAMES, self.azimuths, self.n_pois = share_pois(self.pois_file)
-            self.POIs_lat = np.array(self.POIs_lat)
-            self.POIs_lon = np.array(self.POIs_lon)
-            print("Found ", self.n_pois, "POIs in the shared file ", self.pois_file)
-            self.i_pois = self.idx_POIs
+        set_pois_attrs(self, load_selected_pois(
+            self.pois_file, self.pois_subset, self.n_pois, self.max_distance,
+            self.pois_selection_method, self.pois_subset_flag))
 
     def plot(self):
-
         """
         Return the ensemble plot at the selected POIs
         """
@@ -1621,8 +1434,4 @@ class EnsemblePlot:
         plt.close(fig)
         print(f"***** Figure saved in {path} *****")
  
-        pois_map(self.POIs_lat, self.POIs_lon, self.Lat_Event, self.Lon_Event, path, self.buffer)
-
-
-
-
+        pois_map(self.POIs_lat, self.POIs_lon, Lat_Event, Lon_Event, path, self.buffer)

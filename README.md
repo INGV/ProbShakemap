@@ -1,7 +1,7 @@
 # ProbShakemap
 
-`ProbShakemap` is a Python toolbox that propagates source uncertainty from an ensemble of earthquake scenarios to ground motion predictions at a grid of Points of Interest (POIs). It accounts for model uncertainty by accommodating multiple Ground Motion Models (GMMs) and their inherent variability. The output consists of a set of products aiding the user to explore and visualize the predictive distribution of ground motion at each target point. 
-The package includes `SeisEnsMan`, a tool for generating event-compatible source scenario ensembles. Originally designed for Urgent Computing applications, `ProbShakemap` is versatile enough to be adapted for other uses, such as scenario-based seismic hazard assessments.
+`ProbShakemap` is a Python toolbox that propagates source uncertainty from an ensemble of earthquake scenarios to ground motion predictions at a grid of Points of Interest (POIs). It accounts for model uncertainty by incorporating multiple Ground Motion Models (GMMs) and their inherent variability. The output consists of a set of products helping the user to explore and visualize the predictive distribution of ground motion at each target point. 
+The package includes `SeisEnsMan`, a tool for generating event-compatible source scenario ensembles. Originally designed for Seismic Urgent Computing applications, `ProbShakemap` is versatile enough to be adapted for other uses, such as scenario-based seismic hazard assessments.
 
 Dependencies
 ------------
@@ -13,14 +13,10 @@ NOTE: From `v1.2` onward, `ProbShakemap` uses only `OpenQuake` (original version
 Command line usage
 ------------------
 <pre>
-usage: ProbShakemap.py [-h] [--imt IMT] [--tool {StationRecords,Save_Output,QueryHDF5}]
-                       [--prob_tool {GetStatistics,GetDistributions,EnsemblePlot} [{GetStatistics,GetDistributions,EnsemblePlot} ...]]
-                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--num_processes NUM_PROCESSES]
-                       [--imt_min IMT_MIN] [--imt_max IMT_MAX] [--station_file STATION_FILE]
-                       [--scenario SCENARIO] [--pois_file POIS_FILE] [--pois_subset] [--n_pois N_POIS]
-                       [--buffer BUFFER] [--max_distance MAX_DISTANCE]
-                       [--pois_selection_method {random,azimuth_uniform}] [--reuse_pois_subset]
-                       [--vector_npy] [--fileScenariosWeights FILESCENARIOSWEIGHTS]
+usage: ProbShakemap.py [-h] [--imt IMT] [--tool {StationRecords,Save_Output,QueryHDF5}] [--prob_tool {GetStatistics,GetDistributions,EnsemblePlot}     [{GetStatistics,GetDistributions,EnsemblePlot} ...]]
+                       [--numGMPEsRealizations NUMGMPESREALIZATIONS] [--imt_min IMT_MIN] [--imt_max IMT_MAX] [--station_file STATION_FILE] [--scenario SCENARIO] [--pois_file POIS_FILE] [--pois_subset]
+                       [--n_pois N_POIS] [--max_distance MAX_DISTANCE] [--pois_selection_method {random,azimuth_uniform}] [--reuse_pois_subset] [--buffer BUFFER] [--vector_npy]
+                       [--fileScenariosWeights FILESCENARIOSWEIGHTS]
 
 ProbShakemap Toolbox
 
@@ -35,8 +31,6 @@ input params:
                         ProbShakemap Tool(s) to use
   --numGMPEsRealizations NUMGMPESREALIZATIONS
                         Total number of GMPEs random samples
-  --num_processes NUM_PROCESSES
-                        Number of CPU cores for code parallelization
   --imt_min IMT_MIN     Minimum value for the selected IMT (for plot only)
   --imt_max IMT_MAX     Maximum value for the selected IMT (for plot only)
   --station_file STATION_FILE
@@ -44,14 +38,14 @@ input params:
   --scenario SCENARIO   Scenario number
   --pois_file POIS_FILE
                         Filename with latitude and longitude of POIs
-  --pois_subset         Extract a subset of POIs
+  --pois_subset         Extract a new subset of POIs and save it in OUTPUT/POIs.txt
   --n_pois N_POIS       Number of POIs in the subset
-  --buffer BUFFER       Buffer to control resolution in prob_tools maps
   --max_distance MAX_DISTANCE
                         Max distance from epicenter of POIs in the subset
   --pois_selection_method {random,azimuth_uniform}
                         Selection method for the POIs of the subset
-  --reuse_pois_subset   Reuse the subset of POIs already extracted in POIs.txt
+  --reuse_pois_subset   Reuse the subset of POIs already saved in OUTPUT/POIs.txt
+  --buffer BUFFER       Buffer to control resolution in prob_tools maps
   --vector_npy          Store ground motion distributions at all POIs (vector.npy)
   --fileScenariosWeights FILESCENARIOSWEIGHTS
                         File with scenarios weights
@@ -70,8 +64,6 @@ Then, create and activate the `probshakemap` conda environment:
 conda env create -f probshakemap_environment.yml -n probshakemap
 conda activate probshakemap
 ```
-
-The repository includes example input files (`INPUT_FILES`) and output (`OUTPUT_REPO`) from the Mw 6.5, 2016 October 30, Norcia Earthquake.
 
 `SeisEnsMan` requires a separate virtual environment. To set it up, follow these steps:
 
@@ -98,7 +90,7 @@ python3 -m pip install -r requirements.txt
 GETTING STARTED
 ---------------
 
-To get started with `ProbShakemap`, make sure to provide all required input files in the folder `INPUT_FILES`:
+To get started with `ProbShakemap`, make sure the folder `INPUT_FILES` contain:
 
 1) `input_file.txt`
 
@@ -192,7 +184,7 @@ Run the probabilistic analysis and save the output to a .HDF5 file (can be large
 scenario --> POI --> GMPEs realizations
 
 ```bash
-python ProbShakemap.py --imt PGA --tool Save_Output --num_processes 8 --pois_file grid.txt --numGMPEsRealizations 10
+python ProbShakemap.py --imt PGA --tool Save_Output --pois_file grid.txt --numGMPEsRealizations 10
 ```
 
 OUTPUT
@@ -228,7 +220,7 @@ GMF realizations at Site_LAT:43.0846_LON:13.4778 for Scenario_10: [0.18333985, 0
 Calculate, save and plot the statistics of the ground motion predictive distributions at all POIs.
 
 ```bash
-python ProbShakemap.py --imt PGA --prob_tool GetStatistics --num_processes 8 --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 1
+python ProbShakemap.py --imt PGA --prob_tool GetStatistics --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 1
 ```
 
 OUTPUT
@@ -251,7 +243,7 @@ Plot the cumulative distribution of the predicted ground-motion values and main 
 Note: requires `stationlist.json` file. 
 
 ```bash
-python ProbShakemap.py --imt PGA --prob_tool GetDistributions --num_processes 8 --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json
+python ProbShakemap.py --imt PGA --prob_tool GetDistributions --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json
 ```
 
 OUTPUT
@@ -273,7 +265,7 @@ OUTPUT
 Plot and summarize the key statistical features of the distribution of predicted ground-motion values at the POIs.
 
 ```bash
-python ProbShakemap.py --imt PGA --prob_tool EnsemblePlot --num_processes 8 --pois_file grid.txt --numGMPEsRealizations 10
+python ProbShakemap.py --imt PGA --prob_tool EnsemblePlot --pois_file grid.txt --numGMPEsRealizations 10
 ```
 
 OUTPUT
@@ -285,30 +277,48 @@ OUTPUT
     <img src="https://github.com/INGV/ProbShakemap/blob/main/OUTPUT_REPO/Ensemble_Plot.png" alt="DatumEnsemble" width="50%" height="50%">
 </p>
 
-**POIs SUBSET OPTION**
+EXAMPLE
+----------
+This release includes an example test for the Mw 6.5, 2016 October 30 Norcia earthquake. The example is already arranged with:
 
-When using the tools `QueryHDF5`, `GetStatistics`, `GetDistributions` and `EnsemblePlot`, you can require to extract a subset of POIs within a maximum distance from the event epicenter following one of the following spatial distributions: <ins>random</ins> and <ins>azimuthally uniform</ins>. This changes the command line to:
+- `INPUT_FILES/input_file.txt`
+- `INPUT_FILES/grid.txt`
+- `INPUT_FILES/ENSEMBLE/`
+- `INPUT_FILES/events/8863681/`
+- `INPUT_FILES/vs30/` (large file, must be downloaded at this [link](https://drive.google.com/file/d/1St_tRzBTlB3vY69PCcKu-DYYvehTmYA1/view?usp=sharing))
+
+Run the example with:
+
+```bash
+cd example/norcia
+./run_code.sh
+```
+
+POIs SUBSET OPTION
+----------
+
+By default, `ProbShakemap` uses all POIs in the file passed with `--pois_file`. Use `--pois_subset` to extract a new subset of POIs: you can require to extract a subset of POIs within a maximum distance from the event epicenter following one of the following spatial distributions: <ins>random</ins> and <ins>azimuthally uniform</ins>. This changes the command line to:
 
 ```bash
 python ProbShakemap.py [...] --pois_subset --n_pois 12 --max_distance 50 --pois_selection_method azimuth_uniform
 ```
 If <ins>azimuthally uniform</ins> is selected, POIs are chosen within a ring in the range `max_distance +- max_distance/10`.
 
-**MULTIPLE TOOLS AT THE SAME TIME**
+The selected subset is saved to:
+```text
+OUTPUT/POIs.txt
+```
+
+Use `--reuse_pois_subset` to reuse an existing `OUTPUT/POIs.txt` from a previous command.
+
+MULTIPLE TOOLS AT THE SAME TIME
+----------
 
 `ProbShakemap` can handle multiple tools at the same time. Be aware that, in this case, the same settings will apply (ie,`--imt_min`, `--imt_max`, `--pois_subset` etc.).
 
 ```bash
-python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --num_processes 8 --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json --pois_subset --n_pois 12 --max_distance 50 --pois_selection_method azimuth_uniform
+python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json --pois_subset --n_pois 12 --max_distance 50 --pois_selection_method azimuth_uniform
 ```
-
-**HPC**
-
-`ProbShakemap` uses the Python `multiprocessing` library to perform computations on chunks of scenarios distributed across multiple processes.
-
-WORKFLOW
---------
-`run_code.sh` automates both the generation of the ensemble of scenarios and the propagation of source uncertainty to the set of POIs. It also provides an overview of the commands that can be used to launch the `ProbShakemap` tools.
 
 RUPTURE SCENARIOS BUILDING 
 --------------------------
@@ -327,8 +337,8 @@ If you need support write to [angela.stallone@ingv.it](mailto:angela.stallone@in
 Contributions & Acknowledgements
 --------------------------------
 
-Jacopo Selva coded the `GetStatistics` tool; Louise Cordrie authored the `SeisEnsMan` tool and tested `ProbShakemap` on the INGV-Bologna ADA cluster.
-I thank Valentino Lauciani for testing and developing the INGV Shakemap Docker and Licia Faenza for testing ProbShakemap. I also thank Michele Proietto (@https://github.com/miproietto) for assisting us in building the Docker image on the HPC cluster using Singularity.
+Jacopo Selva coded the initial draft of `GetStatistics` tool; Louise Cordrie (@https://github.com/louisecordrie) authored the `SeisEnsMan` tool and tested `ProbShakemap` on the INGV-Bologna ADA cluster.
+I thank Valentino Lauciani (@https://github.com/vlauciani) for testing and developing the INGV Shakemap Docker (ProbShakemap < 1.2.0) and Licia Faenza for testing ProbShakemap. I also thank Michele Proietto (@https://github.com/miproietto) for assisting us in building the Docker image on the HPC cluster using Singularity (ProbShakemap < 1.2.0).
 
 Citation
 --------
@@ -343,8 +353,7 @@ If you use `ProbShakemap` in your research, please cite using the following cita
   volume={195},
   pages={105748},
   year={2025},
-  publisher={Elsevier},
-  doi=10.1016/j.cageo.2024.105748
+  publisher={Elsevier}
 }
 ```
 
