@@ -52,7 +52,7 @@ def run_main():
     """
 
     # Set the random seed for reproducibility (must be the same as in tools.py)
-    config_dict = config.load_config('input_file.txt')
+    config_dict = config.load_config()
     seed = config_dict['seed']
     np.random.seed(seed)
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     input_params.add_argument('--pois_selection_method', choices=['random', 'azimuth_uniform'], help='Selection method for the POIs of the subset')
     input_params.add_argument('--reuse_pois_subset', action='store_true', default=False, help='Reuse the subset of POIs already saved in OUTPUT/POIs.txt')
     input_params.add_argument('--buffer', type=float, default=0.5, help='Buffer to control resolution in prob_tools maps')
-    input_params.add_argument('--vector_npy', action='store_true', default=False, help='Store ground motion distributions at all POIs (vector.npy)')
+    input_params.add_argument('--vector_npy', action='store_true', default=False, help='Store ground motion distributions at all POIs ({IMT}_vector.npy)')
     input_params.add_argument('--fileScenariosWeights', default="", help='File with scenarios weights')
 
     # Parse command-line arguments
@@ -163,7 +163,6 @@ if __name__ == '__main__':
         logging.info(f"Tool: {args.tool}")
         logging.info(f"Intensity Measure: {args.imt}")
         logging.info(f"POIs File: {args.pois_file}")
-        log_pois_mode(args)
         if args.pois_subset:
             logging.info(f"Scenario: {args.scenario}")
 

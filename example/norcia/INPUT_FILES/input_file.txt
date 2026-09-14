@@ -5,7 +5,7 @@ ID_Event: 8863681
 Vs30file: global_italy_vs30_clobber.grd
 CorrelationModel: JB2009CorrelationModel
 CrosscorrModel: FullCrossCorrelation
-vs30_clustering: True 
+vs30_clustering: True
 truncation_level: 3
 seed: 0
 
@@ -18,9 +18,9 @@ seed: 0
 * ID_Event: ID of the event.
 * Vs30file: GMT .grd Vs30 file; if not provided, set it to None. Default Vs30 value (760 m/s) will be used instead.
 * CorrelationModel: as required from openquake.hazardlib.correlation.
-* CrosscorrModel: as required from openquake.hazardlib.cross_orrelation.
+* CrosscorrModel: as required from openquake.hazardlib.cross_correlation. Note: unused (currently, the algorithm processes one IM at a time), but needed for code compatibility
 * vs30_clustering: `True` value means that Vs30 values are expected to show clustering (as required from openquake.hazardlib.correlation).
-* truncation_level: number of standard deviations for truncation of the cross-correlation model distribution (as required from openquake.hazardlib.cross_correlation). Note that the truncation feature is lost if you use correlation (see OpenQuake documentation). This parameter is only accounted for when 'NoCrossCorrelation' is selected by the user. 
+* truncation_level: number of standard deviations for truncation of the cross-correlation model distribution (as required from openquake.hazardlib.cross_correlation). Note that the truncation feature is lost if you use correlation (see OpenQuake documentation). This parameter is only accounted for when 'NoCrossCorrelation' is selected by the user.
 * seed: Random seed to ensure reproducibility in sampling from the GMMs
 
 

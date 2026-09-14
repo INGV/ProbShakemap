@@ -2,7 +2,7 @@ import os
 
 filename = 'input_file.txt'
 
-def load_config(file):
+def load_config():
     with open(os.path.join(os.getcwd(), "INPUT_FILES", filename), 'r') as file:
         lines = file.readlines()
 

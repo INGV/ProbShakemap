@@ -1,6 +1,6 @@
 # ProbShakemap
 
-`ProbShakemap` is a Python toolbox that propagates source uncertainty from an ensemble of earthquake scenarios to ground motion predictions at a grid of Points of Interest (POIs). It accounts for model uncertainty by incorporating multiple Ground Motion Models (GMMs) and their inherent variability. The output consists of a set of products helping the user to explore and visualize the predictive distribution of ground motion at each target point. 
+`ProbShakemap` is a Python toolbox that propagates source uncertainty from an ensemble of earthquake scenarios to ground motion predictions at a grid of Points of Interest (POIs). It accounts for model uncertainty by incorporating multiple Ground Motion Prediction Equations (GMPEs) and their inherent variability. The output consists of a set of products helping the user to explore and visualize the predictive distribution of ground motion at each target point.
 The package includes `SeisEnsMan`, a tool for generating event-compatible source scenario ensembles. Originally designed for Seismic Urgent Computing applications, `ProbShakemap` is versatile enough to be adapted for other uses, such as scenario-based seismic hazard assessments.
 
 Dependencies
@@ -9,7 +9,7 @@ Dependencies
  * [OpenQuake](https://github.com/gem/oq-engine/blob/master/README.md)
 
 NOTE: From `v1.2` onward, `ProbShakemap` uses only `OpenQuake` (original version relied on `ShakeMap` as well) and can be installed with `conda` (no Docker needed).
- 
+
 Command line usage
 ------------------
 <pre>
@@ -46,11 +46,11 @@ input params:
                         Selection method for the POIs of the subset
   --reuse_pois_subset   Reuse the subset of POIs already saved in OUTPUT/POIs.txt
   --buffer BUFFER       Buffer to control resolution in prob_tools maps
-  --vector_npy          Store ground motion distributions at all POIs (vector.npy)
+  --vector_npy          Store ground motion distributions at all POIs ({IMT}_vector.npy)
   --fileScenariosWeights FILESCENARIOSWEIGHTS
                         File with scenarios weights
-</pre>                        
-            
+</pre>
+
 INSTALLATION
 ------------
 To install `ProbShakemap`, clone the `ProbShakemap` repository to your local machine:
@@ -90,42 +90,48 @@ python3 -m pip install -r requirements.txt
 GETTING STARTED
 ---------------
 
-To get started with `ProbShakemap`, make sure the folder `INPUT_FILES` contain:
+To get started with `ProbShakemap`, make sure the folder `INPUT_FILES` contains:
 
 1) `input_file.txt`
 
 This file (do not rename) contains the necessary inputs for `OpenQuake`, including:
 
-> * TectonicRegionType: as defined in OpenQuake tectonic regionalisation.
-> * Magnitude_Scaling_Relationship: as required from openquake.hazardlib.scalerel.
-> * Rupture_aratio: rupture aspect ratio as required from openquake.hazardlib.geo.surface.PlanarSurface.from_hypocenter
-> * ID_Event: Event ID, pointing to the corresponding event folder in the `events` directory.
-> * Vs30file: GMT .grd Vs30 file; if not provided, set it to None. Default Vs30 value (760 m/s) will be used instead.
-> * CorrelationModel: as required from openquake.hazardlib.correlation.
-> * CrosscorrModel: as required from openquake.hazardlib.cross_orrelation.
-> * vs30_clustering: `True` value means that Vs30 values are expected to show clustering (as required from openquake.hazardlib.correlation).
-> * truncation_level: number of standard deviations for truncation of the cross-correlation model distribution (as required from openquake.hazardlib.cross_correlation). Note that the truncation feature is lost if you use correlation (see OpenQuake documentation). This parameter is only accounted for when 'NoCrossCorrelation' is selected by the user.
-> * seed: Random seed to ensure reproducibility in sampling from the GMMs.
+- `TectonicRegionType`: as defined in OpenQuake tectonic regionalisation.
+- `Magnitude_Scaling_Relationship`: as required from `openquake.hazardlib.scalerel`.
+- `Rupture_aratio`: rupture aspect ratio as required from `openquake.hazardlib.geo.surface.PlanarSurface.from_hypocenter`.
+- `ID_Event`: event ID, pointing to the corresponding event folder in the `events` directory.
+- `Vs30file`: GMT `.grd` Vs30 file. If not provided, set it to `None`; the default Vs30 value (760 m/s) will be used instead. [1]
+- `CorrelationModel`: as required from `openquake.hazardlib.correlation`.
+- `CrosscorrModel`: as required from `openquake.hazardlib.cross_correlation`. [2]
+- `vs30_clustering`: `True` means that Vs30 values are expected to show clustering, as required from `openquake.hazardlib.correlation`.
+- `truncation_level`: number of standard deviations for truncation of the cross-correlation model distribution, as required from `openquake.hazardlib.cross_correlation`. Note that the truncation feature is lost if you use correlation (see OpenQuake documentation). This parameter is only accounted for when `NoCrossCorrelation` is selected by the user.
+- `seed`: random seed to ensure reproducibility in sampling from the GMPEs.
 
-2) `POIs file` 
+Notes:
+
+[1] An example file, `global_italy_vs30_clobber.grd` (Michelini et al., 2020), is available at this [link](https://drive.google.com/file/d/1St_tRzBTlB3vY69PCcKu-DYYvehTmYA1/view?usp=sharing). To run the packaged Norcia example without editing `input_file.txt`, place this file in `example/norcia/INPUT_FILES/vs30/`.
+
+[2] `CrosscorrModel` is accepted for OpenQuake compatibility only, but cross-correlation among IMs is not currently used because the algorithm processes one IM at a time.
+
+2) `POIs file`
 
 A file with two space-separated columns: LAT and LON of the POIs.
 
 3) `ENSEMBLE`
 
 This folder must contain the ensemble of source scenarios for the current event. Scenarios can be loaded by the user or automatically generated by `SeisEnsMan`.
-  
-4)  `events` 
+
+4)  `events`
 
 This folder should contain a subfolder named with the current event ID, which needs to include:
-- `event.xml`: contains event magnitude and time, allowing `SeisEnsMan` to download the event's QUAKEML file and generate an ensemble of compatible earthquake source scenarios. 
-- `gmpes.conf`: configuration file for GMMs and their relative weights, which the user must input under `gmpe_sets`. GMMs available in OpenQuake are listed under `gmpe_modules` and can be updated by the user.
+- `event.xml`: contains event magnitude and time, allowing `SeisEnsMan` to download the event's QUAKEML file and generate an ensemble of compatible earthquake source scenarios.
+- `gmpes.conf`: configuration file for GMPEs and their relative weights, which the user must input under `gmpe_sets`. GMPEs available in OpenQuake are listed under `gmpe_modules` and can be updated by the user. Note: GMPE weights must sum to 1.
 
-5) `vs30` (Optional) 
+5) `vs30` (Optional)
 
 Place the Vs30 .grd file here. An example file, `global_italy_vs30_clobber.grd` (Michelini et al., 2020), is available at this [link](https://drive.google.com/file/d/1St_tRzBTlB3vY69PCcKu-DYYvehTmYA1/view?usp=sharing).
 
-7) `stationlist.json` (Optional) 
+6) `stationlist.json` (Optional)
 
 This file should contain ground shaking records from a set of stations and be placed in the event's subfolder. The file should be formatted like USGS `Shakemap` files (see the example in `INPUT_FILES/events/8863681`).
 
@@ -142,7 +148,7 @@ Next, activate the `SeisEnsMan` environment and navigate to the `SeisEnsManV2` d
 ./line_call.sh
 ```
 
-Once the scenarios are generated, `SeisEnsMan` will: 1) copy the ensemble of scenarios to the `INPUT_FILES/ENSEMBLE` folder, making them ready for `ProbShakemap`; 2) move any previous files to the `BACKUP` folder; 3) copy the `event_stat.json` and `parameters_histo_map_99999999.pdf` files to the event subfolder. 
+Once the scenarios are generated, `SeisEnsMan` will: 1) copy the ensemble of scenarios to the `INPUT_FILES/ENSEMBLE` folder, making them ready for `ProbShakemap`; 2) move any previous files to the `BACKUP` folder; 3) copy the `event_stat.json` and `parameters_histo_map_99999999.pdf` files to the event subfolder.
 
 Before running `ProbShakemap`, make sure to deactivate the `SeisEnsMan` environment:
 
@@ -159,11 +165,12 @@ conda activate probshakemap
 ```
 
 Use any of the `ProbShakemap` utilities to explore and visualize the predictive distribution of ground motion at POIs.
-`ProbShakemap` comes with three utility tools - `StationRecords`, `Save_Output`, `QueryHDF5` - and three 'prob tools' - `GetStatistics`, `GetDistributions`, `EnsemblePlot`. 
+`ProbShakemap` comes with three utility tools - `StationRecords`, `Save_Output`, `QueryHDF5` - and three 'prob tools' - `GetStatistics`, `GetDistributions`, `EnsemblePlot`.
+The commands below assume they are launched from the working directory that contains `INPUT_FILES`. For the packaged Norcia example, use the commands in `example/norcia/run_code.sh`, which call `../../ProbShakemap.py`.
 
 **TOOL: StationRecords**
 
-Plot data from station file `stationlist.json`, if provided. 
+Plot data from station file `stationlist.json`, if provided.
 
 ```bash
 python ProbShakemap.py --imt PGA --tool StationRecords --imt_min 0.01 --imt_max 1 --station_file stationlist.json
@@ -226,11 +233,11 @@ python ProbShakemap.py --imt PGA --prob_tool GetStatistics --pois_file grid.txt 
 OUTPUT
 
 * npy files with the statistics (saved in the `npyFiles` folder)
-* map view of the statistics in `vector_stat.npy` (saved in the `STATISTICS` folder)
+* map views of the statistics (saved in the `STATISTICS` folder)
 
 Output saved in the `npyFiles` folder:
-* `vector_stat.npy`: dictionary of statistics computed for the ground motion distributions at all POIs: 'Mean', 'Median','Percentile 10','Percentile 20','Percentile 80','Percentile 90','Percentile 5','Percentile 95','Percentile 2.5','Percentile 97.5';
-* (OPTIONAL, with command `--vector_npy`) `vector.npy`: a 2D array that stores the ground-motion distributions at all POIs. The array has dimensions (`num_pois`, `num_GMPEsRealizations` * `num_scenarios`), where `num_GMPEsRealizations` represents the number of realizations per scenario, and `num_scenarios` is the total number of scenarios in the ensemble. 
+* `{IMT}_vector_stat.npy`: dictionary of statistics computed for the ground motion distributions at all POIs: 'Mean', 'Median','Percentile 10','Percentile 20','Percentile 80','Percentile 90','Percentile 5','Percentile 95','Percentile 2.5','Percentile 97.5';
+* (OPTIONAL, with command `--vector_npy`) `{IMT}_vector.npy`: a 2D array that stores the ground-motion distributions at all POIs. The array has dimensions (`num_pois`, `num_GMPEsRealizations` * `num_scenarios`), where `num_GMPEsRealizations` represents the number of realizations per scenario, and `num_scenarios` is the total number of scenarios in the ensemble.
 
 <p align="center">
     <img src="https://github.com/INGV/ProbShakemap/blob/main/example/norcia/OUTPUT_REPO/STATISTICS/summary_stats.png" alt="SummaryStats" width="90%" height="90%">
@@ -240,7 +247,7 @@ Output saved in the `npyFiles` folder:
 
 Plot the cumulative distribution of the predicted ground-motion values and main statistics at a specific POI together with the ground-motion value recorded at the closest station (or at a POI coincident with the station, if available).
 
-Note: requires `stationlist.json` file. 
+Note: requires `stationlist.json` file.
 
 ```bash
 python ProbShakemap.py --imt PGA --prob_tool GetDistributions --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json
@@ -279,7 +286,7 @@ OUTPUT
 
 EXAMPLE
 ----------
-This release includes an example test for the Mw 6.5, 2016 October 30 Norcia earthquake. The example is already arranged with:
+This release includes an example test for the Mw 6.5, 2016 October 30 Norcia earthquake. The example is already arranged under `example/norcia` with:
 
 - `INPUT_FILES/input_file.txt`
 - `INPUT_FILES/grid.txt`
@@ -297,12 +304,12 @@ cd example/norcia
 POIs SUBSET OPTION
 ----------
 
-By default, `ProbShakemap` uses all POIs in the file passed with `--pois_file`. Use `--pois_subset` to extract a new subset of POIs: you can require to extract a subset of POIs within a maximum distance from the event epicenter following one of the following spatial distributions: <ins>random</ins> and <ins>azimuthally uniform</ins>. This changes the command line to:
+By default, `ProbShakemap` uses all POIs in the file passed with `--pois_file`. Use `--pois_subset` to extract a new subset of POIs within a maximum distance from the event epicenter, following one of these spatial distributions: <ins>random</ins> or <ins>azimuthally uniform</ins>. This changes the command line to:
 
 ```bash
 python ProbShakemap.py [...] --pois_subset --n_pois 12 --max_distance 50 --pois_selection_method azimuth_uniform
 ```
-If <ins>azimuthally uniform</ins> is selected, POIs are chosen within a ring in the range `max_distance +- max_distance/10`.
+If <ins>azimuthally uniform</ins> is selected, POIs are chosen within a ring in the range `max_distance +/- max_distance/10`.
 
 The selected subset is saved to:
 ```text
@@ -314,24 +321,24 @@ Use `--reuse_pois_subset` to reuse an existing `OUTPUT/POIs.txt` from a previous
 MULTIPLE TOOLS AT THE SAME TIME
 ----------
 
-`ProbShakemap` can handle multiple tools at the same time. Be aware that, in this case, the same settings will apply (ie,`--imt_min`, `--imt_max`, `--pois_subset` etc.).
+`ProbShakemap` can handle multiple tools at the same time. Be aware that, in this case, the same settings will apply (i.e., `--imt_min`, `--imt_max`, `--pois_subset`, etc.).
 
 ```bash
 python ProbShakemap.py --imt PGA --prob_tool GetDistributions EnsemblePlot --pois_file grid.txt --numGMPEsRealizations 10 --imt_min 0.001 --imt_max 10 --station_file stationlist.json --pois_subset --n_pois 12 --max_distance 50 --pois_selection_method azimuth_uniform
 ```
 
-RUPTURE SCENARIOS BUILDING 
+RUPTURE SCENARIOS BUILDING
 --------------------------
 
 In `SeisEnsMan`, the hypocenter covariance is built by combining a fixed tectonic uncertainty term with a within-fault uncertainty term, resulting in a single 3D Gaussian.
 In `ProbShakemap`, rupture scenarios are implemented via [PlanarSurface.from_hypocenter()](https://docs.openquake.org/oq-engine/3.15/reference/openquake.hazardlib.geo.surface.html?highlight=from_hypocenter#openquake.hazardlib.geo.surface.planar.PlanarSurface.from_hypocenter) from OpenQuake 3.15.0.
-Here, the planar fault is constructed around the hypocenter using fixed offsets. 
+Here, the planar fault is constructed around the hypocenter using fixed offsets.
 Therefore, each sampled hypocenter acts as the anchor for constructing a planar rupture (consistent with the magnitude scaling relationship and the aspect ratio), rather than being sampled on a pre-defined fault plane. This produces an ensemble of rupture realizations (“cloud of planes”) that captures total hypocentral uncertainty, but does not explicitly separate within-fault vs. global location uncertainty.
 
 Contact
 --------
 
-If you need support write to [angela.stallone@ingv.it](mailto:angela.stallone@ingv.it).
+If you need support, write to [angela.stallone@ingv.it](mailto:angela.stallone@ingv.it).
 
 
 Contributions & Acknowledgements
@@ -358,4 +365,3 @@ If you use `ProbShakemap` in your research, please cite using the following cita
 ```
 
 [doi.org/10.1016/j.cageo.2024.105748](https://doi.org/10.1016/j.cageo.2024.105748)
-

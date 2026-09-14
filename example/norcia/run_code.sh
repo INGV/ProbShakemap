@@ -3,7 +3,7 @@ set -e
 
 # ---------- User Input ----------
 IMT="PGA"
-T="1_000" # FOR SA ONLY (will be ignored for other IMT)
+T="1.0" # FOR SA ONLY (will be ignored for other IMT)
 NUM_GMFs=10
 POIS_FILE="grid.txt"
 IMT_MIN=0.001
